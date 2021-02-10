@@ -1,10 +1,19 @@
 from flask import Flask
 from flask_restful import Api
+from flask_restful_swagger import swagger
 from flask_oidc import OpenIDConnect
 
 app = Flask(__name__)
 
-api = Api(app)
+api = swagger.docs(
+    Api(app),
+    apiVersion='0.1',
+    basePath="http://localhost:8001",
+    resourcePath="/",
+    produces=["application/json", "text/html"],
+    api_spec_url="/api/spec",
+    description="The DAMS storage API",
+)
 
 app.config.update({
     'SECRET_KEY': 'SomethingNotEntirelySecret',
