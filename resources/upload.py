@@ -7,10 +7,11 @@ from storage.storage import upload_file
 
 import app
 
+
 class Upload(Resource):
     @swagger.operation(notes="Upload a mediafile")
-    @app.oidc.accept_token(require_token=True, scopes_required=['openid'])
+    @app.oidc.accept_token(require_token=True, scopes_required=["openid"])
     def post(self):
-        f = request.files['file']
+        f = request.files["file"]
         upload_file(f)
-        return 201 
+        return 201

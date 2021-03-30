@@ -7,13 +7,16 @@ from storage.storage import download_file
 
 import app
 
+
 class Download(Resource):
     @swagger.operation(notes="Download a mediafile")
-    @app.oidc.accept_token(require_token=True, scopes_required=['openid'])
+    @app.oidc.accept_token(require_token=True, scopes_required=["openid"])
     def get(self, filename):
         output = download_file(filename)
+
         @after_this_request
         def add_header(response):
-            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers["Access-Control-Allow-Origin"] = "*"
             return response
+
         return send_file(output)
