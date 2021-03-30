@@ -1,6 +1,5 @@
 import boto3
 import os
-from dotenv import load_dotenv
 
 s3 = boto3.resource('s3',
                     endpoint_url=os.getenv('MINIO_ENDPOINT'),
