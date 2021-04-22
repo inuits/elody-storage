@@ -9,8 +9,10 @@ import app
 
 
 class Download(Resource):
+    token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
+
     @swagger.operation(notes="Download a mediafile")
-    @app.oidc.accept_token(require_token=True, scopes_required=["openid"])
+    @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
     def get(self, filename):
         output = download_file(filename)
 
