@@ -7,13 +7,22 @@ from storage.storage import upload_file
 
 import app
 
+token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
+
 
 class Upload(Resource):
-    token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
-
     @swagger.operation(notes="Upload a mediafile")
     @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
     def post(self):
         f = request.files["file"]
         upload_file(f)
+        return "", 201
+
+
+class UploadKey(Resource):
+    @swagger.operation(notes="Upload a mediafile using a key")
+    @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
+    def post(self, key):
+        f = request.files["file"]
+        upload_file(f, key)
         return "", 201

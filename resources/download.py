@@ -13,12 +13,12 @@ class Download(Resource):
 
     @swagger.operation(notes="Download a mediafile")
     @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
-    def get(self, filename):
-        output = download_file(filename)
+    def get(self, key):
+        output = download_file(key)
         if output is None:
             abort(
                 404,
-                message="File {} doesn't exist".format(filename),
+                message="File {} doesn't exist".format(key),
             )
 
         @after_this_request

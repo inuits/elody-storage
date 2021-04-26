@@ -12,11 +12,13 @@ s3 = boto3.resource(
 bucket = os.getenv("MINIO_BUCKET")
 
 
-def upload_file(file):
+def upload_file(file, key=None):
     """
     Function to upload a file to an S3 bucket
     """
-    s3.Bucket(bucket).put_object(Key=file.filename, Body=file)
+    if key is None:
+        key = file.filename
+    s3.Bucket(bucket).put_object(Key=key, Body=file)
 
     return True
 

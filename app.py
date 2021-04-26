@@ -33,11 +33,12 @@ app.config.update(
 
 oidc = OpenIDConnect(app)
 
-from resources.upload import Upload
+from resources.upload import Upload, UploadKey
 from resources.download import Download
 
 api.add_resource(Upload, "/upload")
-api.add_resource(Download, "/download/<string:filename>")
+api.add_resource(UploadKey, "/upload/<string:key>")
+api.add_resource(Download, "/download/<string:key>")
 
 if __name__ == "__main__":
     app.run(debug=True)
