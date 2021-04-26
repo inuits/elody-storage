@@ -1,4 +1,5 @@
 import boto3
+import botocore
 import os
 
 s3 = boto3.resource(
@@ -25,6 +26,8 @@ def download_file(file_name):
     Function to download a given file from an S3 bucket
     """
     output = f"downloads/{file_name}"
-    s3.Bucket(bucket).download_file(file_name, output)
-
+    try:
+        s3.Bucket(bucket).download_file(file_name, output)
+    except botocore.exceptions.ClientError as e:
+        return None
     return output

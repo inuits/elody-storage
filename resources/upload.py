@@ -16,4 +16,4 @@ class Upload(Resource):
     def post(self):
         f = request.files["file"]
         upload_file(f)
-        return 201
+        return "", 201
