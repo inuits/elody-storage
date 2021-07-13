@@ -1,0 +1,197 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "DAMS Storage API",
+    "description": "An API for interactings with the storage layer of DAMS",
+    "contact": {
+      "email": "booster@inuits.eu"
+    },
+    "version": "0.0.1"
+  },
+  "externalDocs": {
+    "description": "Find out more about DAMS",
+    "url": "https://docs.inuits.io/dams/storage-api"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "download",
+      "description": "Download mediafiles"
+    },
+    {
+      "name": "upload",
+      "description": "Upload mediafiles"
+    }
+  ],
+  "paths": {
+    "/upload": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Upload a new mediafile",
+        "operationId": "uploadMediafile",
+        "requestBody": {
+          "description": "Mediafile that needs to be uploaded",
+          "required": true,
+          "content": {
+            "image/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ok"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/upload/{key}": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Upload a new mediafile with a specified key",
+        "operationId": "uploadMediafileUsingKey",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The file identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Mediafile that needs to be uploaded",
+          "required": true,
+          "content": {
+            "image/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ok"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/download/{key}": {
+      "get": {
+        "tags": [
+          "download"
+        ],
+        "summary": "Download an existing mediafile",
+        "operationId": "downloadMediafile",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The file identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mediafile not found"
+          }
+        }
+      }
+    }
+  }
+}

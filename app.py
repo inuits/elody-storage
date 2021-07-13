@@ -1,20 +1,12 @@
 import os
 from flask import Flask
 from flask_restful import Api
-from flask_restful_swagger import swagger
 from flask_oidc import OpenIDConnect
+from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
 
-api = swagger.docs(
-    Api(app),
-    apiVersion="0.1",
-    basePath="http://localhost:8001",
-    resourcePath="/",
-    produces=["application/json", "text/html"],
-    api_spec_url="/api/spec",
-    description="The DAMS storage API",
-)
+api = Api(app)
 
 app.config.update(
     {
@@ -31,14 +23,26 @@ app.config.update(
     }
 )
 
+SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
+API_URL = (
+    "/spec/dams-storage-api.json"  # Our API url (can of course be a local resource)
+)
+
+swaggerui_blueprint = get_swaggerui_blueprint(SWAGGER_URL, API_URL)
+
 oidc = OpenIDConnect(app)
+
+app.register_blueprint(swaggerui_blueprint)
 
 from resources.upload import Upload, UploadKey
 from resources.download import Download
+from resources.spec import OpenAPISpec
 
 api.add_resource(Upload, "/upload")
 api.add_resource(UploadKey, "/upload/<string:key>")
 api.add_resource(Download, "/download/<string:key>")
+api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
