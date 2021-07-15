@@ -17,7 +17,7 @@ class DownloadFileTest(BaseCase):
 
         self.assertEqual(200, response.status_code)
 
-    def test_non_existant_image_download(self):
+    def test_non_existent_image_download(self):
         response = self.app.get("/download/test.png")
 
         self.assertEqual(1, len(response.json))
