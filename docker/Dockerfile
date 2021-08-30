@@ -6,6 +6,8 @@ WORKDIR /app
 
 COPY docker/entrypoint*.sh /
 COPY requirements.txt ./
+COPY docker/run-tests.sh /
+COPY docker/test-coverage.sh /
 
 RUN mkdir downloads
 RUN chown -R app:app downloads
