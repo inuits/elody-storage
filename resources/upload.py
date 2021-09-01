@@ -22,7 +22,7 @@ class Upload(Resource):
             upload_file(f)
             job_helper.finish_job(job)
         except:
-            job_helper.fail_job(job)
+            job_helper.fail_job(job, sys.exc_info()[0])
         return "", 201
 
 
@@ -37,5 +37,5 @@ class UploadKey(Resource):
             upload_file(f, key)
             job_helper.finish_job(job)
         except:
-            job_helper.fail_job(job)
+            job_helper.fail_job(job, sys.exc_info()[0])
         return "", 201
