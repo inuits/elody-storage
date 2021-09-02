@@ -39,9 +39,12 @@ class JobHelper:
         return job
 
     def progress_job(self, job, asset_id=None, mediafile_id=None, parent_job_id=None):
-        job["asset_id"] = "" if asset_id is None else asset_id
-        job["mediafile_id"] = "" if mediafile_id is None else mediafile_id
-        job["parent_job_id"] = "" if parent_job_id is None else parent_job_id
+        if asset_id is not None:
+            job["asset_id"] = asset_id
+        if mediafile_id is not None:
+            job["mediafile_id"] = mediafile_id
+        if parent_job_id is not None:
+            job["parent_job_id"] = parent_job_id
         job["status"] = Status.IN_PROGRESS.value
         return self.__patch_job(job)
 
