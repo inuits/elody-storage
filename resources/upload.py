@@ -3,7 +3,7 @@ from flask_restful import Resource
 from flask import g, request
 
 from storage.storage import upload_file
-from classes.job_helper import JobHelper
+from job_helper.job_helper import JobHelper
 
 import app
 

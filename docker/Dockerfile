@@ -21,7 +21,10 @@ ARG APP_ENV
 
 ENV APP_ENV=${APP_ENV}
 
-RUN pip install -r requirements.txt
+ARG PIPENV_USERNAME
+ARG PIPENV_PASSWORD
+
+RUN pip install -r requirements_dev.txt -i "https://${PIPENV_USERNAME}:${PIPENV_PASSWORD}@nexus.inuits.eu/repository/python/simple"
 
 ### Build stage
 FROM base-stage AS build-stage
@@ -29,7 +32,10 @@ FROM base-stage AS build-stage
 COPY . ./
 RUN chown -R app:app downloads
 
-RUN pip install -r requirements.txt
+ARG PIPENV_USERNAME
+ARG PIPENV_PASSWORD
+
+RUN pip install -r requirements.txt -i "https://${PIPENV_USERNAME}:${PIPENV_PASSWORD}@nexus.inuits.eu/repository/python/simple"
 
 ### Production stage
 FROM build-stage AS production-stage
