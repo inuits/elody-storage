@@ -20,8 +20,8 @@ class Upload(Resource):
             f = request.files["file"]
             upload_file(f)
             job_helper.finish_job(job)
-        except:
-            job_helper.fail_job(job, sys.exc_info()[0])
+        except Exception as ex:
+            job_helper.fail_job(job, str(ex))
         return "", 201
 
 
@@ -34,6 +34,6 @@ class UploadKey(Resource):
             f = request.files["file"]
             upload_file(f, key)
             job_helper.finish_job(job)
-        except:
-            job_helper.fail_job(job, sys.exc_info()[0])
+        except Exception as ex:
+            job_helper.fail_job(job, str(ex))
         return "", 201
