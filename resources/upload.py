@@ -1,11 +1,10 @@
-import os
-from flask_restful import Resource
-from flask import g, request
-
-from storage.storage import upload_file
-from job_helper.job_helper import JobHelper
-
 import app
+import os
+
+from flask import request
+from flask_restful import Resource
+from job_helper.job_helper import JobHelper
+from storage.storage import upload_file
 
 token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
 job_helper = JobHelper(os.getenv("JOB_API_BASE_URL", "http://localhost:8000"))
@@ -22,6 +21,7 @@ class Upload(Resource):
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
+            raise ex
         return "", 201
 
 
@@ -36,4 +36,5 @@ class UploadKey(Resource):
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
+            raise ex
         return "", 201
