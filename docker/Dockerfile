@@ -6,7 +6,6 @@ WORKDIR /app
 
 COPY docker/entrypoint*.sh /
 COPY requirements.txt ./
-COPY requirements_dev.txt ./
 COPY docker/run-tests.sh /
 COPY docker/test-coverage.sh /
 
@@ -26,7 +25,6 @@ ARG PIPENV_USERNAME
 ARG PIPENV_PASSWORD
 
 RUN pip install -r requirements.txt -i "https://${PIPENV_USERNAME}:${PIPENV_PASSWORD}@nexus.inuits.eu/repository/python/simple"
-RUN pip install -r requirements_dev.txt -i "https://${PIPENV_USERNAME}:${PIPENV_PASSWORD}@nexus.inuits.eu/repository/python/simple"
 
 ### Build stage
 FROM base-stage AS build-stage
