@@ -1,6 +1,5 @@
 import os
 import unittest
-import json
 import boto3
 from io import BytesIO
 from PIL import Image

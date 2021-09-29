@@ -1,6 +1,7 @@
 import boto3
 import botocore
 import os
+
 from pathlib import Path
 
 s3 = boto3.resource(
@@ -9,8 +10,8 @@ s3 = boto3.resource(
     aws_access_key_id=os.getenv("MINIO_ACCESS_KEY"),
     aws_secret_access_key=os.getenv("MINIO_SECRET_KEY"),
 )
-
 bucket = os.getenv("MINIO_BUCKET")
+
 
 def upload_file(file, key=None):
     """
