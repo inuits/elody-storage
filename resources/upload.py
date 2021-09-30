@@ -21,7 +21,7 @@ class Upload(Resource):
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
-            raise ex
+            return str(ex), 400
         return "", 201
 
 
@@ -36,5 +36,5 @@ class UploadKey(Resource):
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
-            raise ex
+            return str(ex), 400
         return "", 201
