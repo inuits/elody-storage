@@ -1,8 +1,10 @@
 from tests.base_case import BaseCase
+from unittest.mock import patch
 
 
 class DownloadFileTest(BaseCase):
-    def test_download(self):
+    @patch("resources.upload.job_helper")
+    def test_download(self, fake_job_helper):
         data = dict()
         data["file"] = self.create_test_image()
         md5 = self.calculate_md5(data["file"])

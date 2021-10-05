@@ -1,8 +1,10 @@
 from tests.base_case import BaseCase
+from unittest.mock import patch
 
 
+@patch("resources.upload.job_helper")
 class UploadFileTest(BaseCase):
-    def test_upload(self):
+    def test_upload(self, fake_job_helper):
         data = dict()
         data["file"] = self.create_test_image()
 
@@ -13,7 +15,7 @@ class UploadFileTest(BaseCase):
         self.assertFalse(response.json)
         self.assertEqual(201, response.status_code)
 
-    def test_invalid_file_upload(self):
+    def test_invalid_file_upload(self, fake_job_helper):
         data = dict()
         data["file"] = "test.png"
 
