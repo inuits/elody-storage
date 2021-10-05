@@ -17,7 +17,10 @@ class Upload(Resource):
         job_helper.progress_job(job)
         try:
             f = request.files["file"]
-            upload_file(f)
+            if request.args.get("action") == "postMD5":
+                upload_file(f, url=request.args.get("url"))
+            else:
+                upload_file(f)
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
@@ -32,7 +35,10 @@ class UploadKey(Resource):
         job_helper.progress_job(job)
         try:
             f = request.files["file"]
-            upload_file(f, key)
+            if request.args.get("action") == "postMD5":
+                upload_file(f, key, request.args.get("url"))
+            else:
+                upload_file(f)
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
