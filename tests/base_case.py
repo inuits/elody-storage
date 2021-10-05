@@ -1,10 +1,11 @@
+import boto3
+import hashlib
 import os
 import unittest
-import boto3
-from io import BytesIO
-from PIL import Image
 
 from app import app
+from io import BytesIO
+from PIL import Image
 
 s3 = boto3.resource(
     "s3",
@@ -34,3 +35,10 @@ class BaseCase(unittest.TestCase):
         file.name = "test.png"
         file.seek(0)
         return file
+
+    def calculate_md5(self, file):
+        hash_obj = hashlib.md5()
+        while chunk := file.read(8192):
+            hash_obj.update(chunk)
+        file.seek(0, 0)
+        return hash_obj.hexdigest()

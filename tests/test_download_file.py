@@ -5,12 +5,13 @@ class DownloadFileTest(BaseCase):
     def test_download(self):
         data = dict()
         data["file"] = self.create_test_image()
+        md5 = self.calculate_md5(data["file"])
 
         self.app.post(
             "/upload", headers={"content-type": "multipart/form-data"}, data=data
         )
 
-        response = self.app.get("/download/test.png")
+        response = self.app.get("/download/{}-test.png".format(md5))
 
         self.assertEqual(200, response.status_code)
 
