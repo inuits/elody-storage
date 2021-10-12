@@ -1,19 +1,16 @@
 ---
 ###############################################################################
-# COMMON APPLICATION PIPELINE
+# PYTHON APPLICATION PIPELINE
 ###############################################################################
 
 include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
-    file: 
-      - 'common-pipeline.yml'
-#    ref: 'v1.0.2'
+    file: 'python-pipeline.yml'
+    ref: 'v1.3.0'
     
 variables:
   CUSTOMER: 'inuits'
   APPLICATION: 'dams-storage'
-  CONSUL_HTTP_ADDR: 'https://consul.service.consul:8501'
-  CONSUL_HTTP_SSL_VERIFY: 'false'
-  REGISTRY_PROXY: 'nexus.inuits.io:6011'
   TERRAFORM_IMAGE: 'dams-terraform'
   TERRAFORM_TAG: 'latest'
+  SKIP_DEPLOY: 'true'
