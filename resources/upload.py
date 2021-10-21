@@ -11,7 +11,7 @@ job_helper = JobHelper(os.getenv("JOB_API_BASE_URL", "http://localhost:8000"))
 
 
 class Upload(Resource):
-    @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
+    @app.require_oauth()
     def post(self):
         job = job_helper.create_new_job("Upload file", "file_upload")
         job_helper.progress_job(job)
@@ -29,7 +29,7 @@ class Upload(Resource):
 
 
 class UploadKey(Resource):
-    @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
+    @app.require_oauth()
     def post(self, key):
         job = job_helper.create_new_job("Upload file", "file_upload")
         job_helper.progress_job(job)
