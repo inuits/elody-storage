@@ -10,7 +10,7 @@ import app
 class Download(Resource):
     token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
 
-    @app.oidc.accept_token(require_token=token_required, scopes_required=["openid"])
+    @app.require_oauth()
     def get(self, key):
         output = download_file(key)
         if output is None:
