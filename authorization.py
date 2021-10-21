@@ -1,7 +1,7 @@
 import base64
 import json
 from abc import ABC
-
+import requests
 from authlib.oauth2.rfc6750 import BearerTokenValidator
 from authlib.oauth2.rfc7523 import JWTBearerToken
 from authlib.jose import jwt, JoseError
@@ -30,7 +30,7 @@ class MyResourceProtector(ResourceProtector):
         auth = request.headers.get('Authorization')
         if not auth and (self.static_jwt is not False):
             auth = "Bearer " + self.static_jwt
-        else:
+        elif not auth:
             raise MissingAuthorizationError(self._default_auth_type, self._default_realm)
         # https://tools.ietf.org/html/rfc6749#section-7.1
         token_parts = auth.split(None, 1)
@@ -46,13 +46,14 @@ class JWTValidator(BearerTokenValidator, ABC):
     TOKEN_TYPE = 'bearer'
     token_cls = JWTBearerToken
 
-    def __init__(self, logger, static_jwt=False, static_issuer=False, static_public_key=False, **extra_attributes):
+    def __init__(self, logger, static_jwt=False, static_issuer=False, static_public_key=False, realms=None, **extra_attributes):
         super().__init__(**extra_attributes)
         self.static_jwt = static_jwt
         self.static_issuer = static_issuer
         self.static_public_key = static_public_key
         self.logger = logger
         self.public_key = None
+        self.realms = [] if realms is None else realms
         claims_options = {
             'exp': {'essential': True},
             'aud': {'essential': True},
@@ -86,7 +87,9 @@ class JWTValidator(BearerTokenValidator, ABC):
     def _get_realm_config_by_issuer(self, issuer):
         if issuer == self.static_issuer:
             return {"public_key": self.static_public_key}
-        # todo get well-known realms configs from remote idp
+        for realm in self.realms:
+            if issuer == realm:
+                return requests.get(realm).json()
         return {}
 
     @staticmethod
