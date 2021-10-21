@@ -36,7 +36,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 require_oauth = MyResourceProtector(os.getenv("STATIC_JWT", False))
 validator = JWTValidator(logger, os.getenv("STATIC_JWT", False), os.getenv("STATIC_ISSUER", False),
-                         os.getenv("STATIC_PUBLIC_KEY", False))
+                         os.getenv("STATIC_PUBLIC_KEY", False), os.getenv("REALMS", "").split(","))
 require_oauth.register_token_validator(validator)
 
 app.register_blueprint(swaggerui_blueprint)
