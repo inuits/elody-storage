@@ -1,46 +1,45 @@
 ### Base stage
 FROM python:3.9-slim AS base-stage
 
-RUN adduser --no-create-home --disabled-password --home /app --shell /bin/ash app
+ENV FLASK_APP=app.py
+
+RUN adduser --disabled-password --home /app --shell /bin/bash app
+USER app
 WORKDIR /app
 
 COPY docker/entrypoint*.sh /
-COPY requirements.txt ./
-COPY requirements_dev.txt ./
 COPY docker/run-tests.sh /
 COPY docker/test-coverage.sh /
+COPY requirements.txt ./
+COPY requirements_dev.txt ./
 
-RUN mkdir downloads
-RUN chown -R app:app downloads
+RUN mkdir -p api/downloads
+
+RUN echo "export PATH=${PATH}:/app/.local/bin" >> .bashrc
 
 ENTRYPOINT ["/entrypoint.sh"]
 
 ### Development stage
 FROM base-stage AS development-stage
 
-ARG APP_ENV
+ENV APP_ENV=dev
 
-ENV APP_ENV=${APP_ENV}
-
-ARG PIPENV_USERNAME
-ARG PIPENV_PASSWORD
+COPY docker/pip.conf /etc
 
 RUN pip install -r requirements.txt -r requirements_dev.txt
 
 ### Build stage
 FROM base-stage AS build-stage
 
-COPY . ./
-RUN chown -R app:app downloads
-
-ARG PIPENV_USERNAME
-ARG PIPENV_PASSWORD
+COPY docker/pip.conf /etc
+COPY api ./api
 
 RUN pip install -r requirements.txt
 
 ### Production stage
 FROM build-stage AS production-stage
 
+ENV APP_ENV=prod
 ENV GUNICORN_CMD_ARGS="--workers=3"
 
-USER app
+COPY --from=build-stage /app /app
