@@ -1,5 +1,4 @@
 aniso8601==8.1.0
-Authlib==1.0.0b1
 boto3==1.16.57
 botocore==1.19.57
 certifi==2020.12.5
@@ -13,6 +12,7 @@ gunicorn==20.0.4
 httplib2==0.18.1
 idna==2.10
 itsdangerous==1.1.0
+inuits-jwt-auth==0.0.3
 Jinja2==2.11.2
 jmespath==0.10.0
 job_helper==0.1.7
