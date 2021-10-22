@@ -3,7 +3,6 @@ import os
 
 from flask import Flask
 from flask_restful import Api
-from flask_oidc import OpenIDConnect
 from flask_swagger_ui import get_swaggerui_blueprint
 
 from inuits_jwt_auth.authorization import MyResourceProtector, JWTValidator
