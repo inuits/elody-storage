@@ -1,5 +1,6 @@
 #!/bin/sh
 
+export PATH=${PATH}:/app/.local/bin
 export REQUIRE_TOKEN=0
 export MINIO_ENDPOINT=http://localhost:5000
 export MINIO_BUCKET=test
