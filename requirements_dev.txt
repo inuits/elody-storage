@@ -1,8 +1,6 @@
 attrs==21.2.0
 black==21.9b0
-cffi==1.14.5
 coverage==5.5
-cryptography==3.4.7
 Flask-Cors==3.0.10
 iniconfig==1.1.1
 more-itertools==8.7.0
@@ -14,7 +12,6 @@ Pillow==8.2.0
 platformdirs==2.4.0
 pluggy==1.0.0
 py==1.10.0
-pycparser==2.20
 pytest==6.2.5
 regex==2021.9.24
 responses==0.13.2
