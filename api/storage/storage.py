@@ -102,4 +102,4 @@ def download_file(file_name):
         s3.Bucket(bucket).download_file(file_name, output)
     except botocore.exceptions.ClientError as e:
         return None
-    return output
+    return Path(output).absolute()
