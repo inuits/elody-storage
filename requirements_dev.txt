@@ -12,6 +12,7 @@ Pillow==8.2.0
 platformdirs==2.4.0
 pluggy==1.0.0
 py==1.10.0
+pyparsing==2.4.7
 pytest==6.2.5
 regex==2021.9.24
 responses==0.13.2
