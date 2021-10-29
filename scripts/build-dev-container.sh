@@ -15,4 +15,4 @@ if [ ! -f "$__DIR/docker/pip.conf" ]; then
   exit 1
 fi
 
-${DOCKER} build -f docker/Dockerfile -t inuits-dams-collection-api:dev --target=development-stage $__DIR $@
+${DOCKER} build -f docker/Dockerfile -t inuits-dams-storage-api:dev --target=development-stage $__DIR $@
