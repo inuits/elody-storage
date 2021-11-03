@@ -13,7 +13,7 @@ Flask==1.1.2
 gunicorn==20.0.4
 idna==2.10
 itsdangerous==1.1.0
-inuits-jwt-auth==0.0.14
+inuits-jwt-auth==0.0.15
 Jinja2==2.11.2
 jmespath==0.10.0
 job_helper==0.1.7
