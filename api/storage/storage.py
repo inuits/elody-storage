@@ -59,11 +59,11 @@ def _update_mediafile_file_location(mediafile, part_to_add, url, duplicate=False
         mediafile["thumbnail_file_location"] = (
             mediafile["thumbnail_file_location"] + "-" + thumb_suffix
         )
-    requests.put(url, json=mediafile)
+    requests.put(url, json=mediafile, headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))})
 
 
 def _get_mediafile(url):
-    return requests.get(url).json()
+    return requests.get(url, headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))}).json()
 
 
 def upload_file(file, key=None, url=None):
