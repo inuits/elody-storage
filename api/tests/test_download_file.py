@@ -2,22 +2,28 @@ from tests.base_case import BaseCase
 from unittest.mock import patch
 
 
+@patch("resources.upload.job_helper")
+@patch("storage.storage._update_mediafile_file_location")
+@patch("storage.storage._get_mediafile")
 class DownloadFileTest(BaseCase):
-    @patch("resources.upload.job_helper")
-    def test_download(self, fake_job_helper):
+    def test_download(self, fake_job_helper, fake_update, fake_get_mediafile):
         data = dict()
         data["file"] = self.create_test_image()
         md5 = self.calculate_md5(data["file"])
 
         self.app.post(
-            "/upload", headers={"content-type": "multipart/form-data"}, data=data
+            "/upload?url=http://test.com",
+            headers={"content-type": "multipart/form-data"},
+            data=data,
         )
 
         response = self.app.get("/download/{}-test.png".format(md5))
 
         self.assertEqual(200, response.status_code)
 
-    def test_non_existent_image_download(self):
+    def test_download_non_existent_image(
+        self, fake_job_helper, fake_update, fake_get_mediafile
+    ):
         response = self.app.get("/download/test.png")
 
         self.assertEqual(1, len(response.json))
