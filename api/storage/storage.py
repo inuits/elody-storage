@@ -67,17 +67,18 @@ def _update_mediafile_file_location(mediafile, part_to_add, url, duplicate=False
 
 
 def _get_mediafile(url):
-    return requests.get(
+    req = requests.get(
         url,
         headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))},
-    ).json()
+    )
+    if req.status_code != 200:
+        raise Exception("Callback url did not lead to existing mediafile")
+    return req.json()
 
 
 def upload_file(file, url, key=None):
     raw_url = url + "?raw=1"
     mediafile = _get_mediafile(raw_url)
-    if not mediafile:
-        raise Exception("Callback url did not lead to existing mediafile")
     if key is None:
         key = file.filename
     md5sum = calculate_md5(file)
