@@ -2,12 +2,19 @@ import app
 import os
 
 from flask import request
-from flask_restful import abort, Resource
+from flask_restful import Resource
 from job_helper.job_helper import JobHelper
 from storage.storage import upload_file
 
 token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
 job_helper = JobHelper(os.getenv("JOB_API_BASE_URL", "http://localhost:8000"))
+
+
+def _get_url(req):
+    url = req.args.get("url")
+    if not url:
+        raise Exception("No callback url provided")
+    return url
 
 
 class Upload(Resource):
@@ -17,9 +24,7 @@ class Upload(Resource):
         job_helper.progress_job(job)
         try:
             f = request.files["file"]
-            url = request.args.get("url")
-            if not url:
-                abort(400, message="No callback url provided")
+            url = _get_url(request)
             upload_file(f, url)
             job_helper.finish_job(job)
         except Exception as ex:
@@ -35,9 +40,7 @@ class UploadKey(Resource):
         job_helper.progress_job(job)
         try:
             f = request.files["file"]
-            url = request.args.get("url")
-            if not url:
-                abort(400, message="No callback url provided")
+            url = _get_url(request)
             upload_file(f, url, key)
             job_helper.finish_job(job)
         except Exception as ex:
