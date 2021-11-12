@@ -2,7 +2,7 @@ import app
 import os
 
 from flask import request
-from flask_restful import Resource
+from flask_restful import abort, Resource
 from job_helper.job_helper import JobHelper
 from storage.storage import upload_file
 
@@ -17,10 +17,10 @@ class Upload(Resource):
         job_helper.progress_job(job)
         try:
             f = request.files["file"]
-            if request.args.get("action") == "postMD5":
-                upload_file(f, url=request.args.get("url"))
-            else:
-                upload_file(f)
+            url = request.args.get("url")
+            if not url:
+                abort(400, message="No callback url provided")
+            upload_file(f, url)
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
@@ -35,10 +35,10 @@ class UploadKey(Resource):
         job_helper.progress_job(job)
         try:
             f = request.files["file"]
-            if request.args.get("action") == "postMD5":
-                upload_file(f, key, request.args.get("url"))
-            else:
-                upload_file(f)
+            url = request.args.get("url")
+            if not url:
+                abort(400, message="No callback url provided")
+            upload_file(f, url, key)
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))

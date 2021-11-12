@@ -59,39 +59,39 @@ def _update_mediafile_file_location(mediafile, part_to_add, url, duplicate=False
         mediafile["thumbnail_file_location"] = (
             mediafile["thumbnail_file_location"] + "-" + thumb_suffix
         )
-    requests.put(url, json=mediafile, headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))})
+    requests.put(
+        url,
+        json=mediafile,
+        headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))},
+    )
 
 
 def _get_mediafile(url):
-    return requests.get(url, headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))}).json()
+    return requests.get(
+        url,
+        headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))},
+    ).json()
 
 
-def upload_file(file, key=None, url=None):
-    if url:
-        raw_url = url + "?raw=1"
+def upload_file(file, url, key=None):
+    raw_url = url + "?raw=1"
+    mediafile = _get_mediafile(raw_url)
+    if not mediafile:
+        raise Exception("Callback url did not lead to existing mediafile")
     if key is None:
         key = file.filename
     md5sum = calculate_md5(file)
     try:
         check_file_exists(file.filename, md5sum)
     except DuplicateFileException as ex:
-        if url:
-            mediafile = _get_mediafile(raw_url)
-            _update_mediafile_file_location(mediafile, ex.existing_file, url, True)
-            error_message = (
-                ex.error_message
-                + " Mediafile & entity file locations were relinked to existing file."
-            )
-        else:
-            error_message = (
-                ex.error_message
-                + " File locations in entity & mediafile entries will be unavailable."
-            )
+        _update_mediafile_file_location(mediafile, ex.existing_file, url, True)
+        error_message = (
+            ex.error_message
+            + " Mediafile & entity file locations were relinked to existing file."
+        )
         raise DuplicateFileException(error_message)
     key = "{}-{}".format(md5sum, key)
-    if url:
-        mediafile = _get_mediafile(raw_url)
-        _update_mediafile_file_location(mediafile, md5sum, url)
+    _update_mediafile_file_location(mediafile, md5sum, url)
     s3.Bucket(bucket).put_object(Key=key, Body=file)
 
 
