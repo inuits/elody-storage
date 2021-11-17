@@ -16,6 +16,6 @@ if [ "$APP_ENV" = "dev" ]; then
 else
   echo "Starting gunicorn server..."
   cd ~/api
-  exec ~/.local/bin/gunicorn -b 0.0.0.0 "app:app"
+  exec ~/.local/bin/gunicorn -b 0.0.0.0 --timeout 120 "app:app"
 fi
 
