@@ -44,21 +44,19 @@ def calculate_md5(file):
 
 
 def _update_mediafile_file_location(mediafile, part_to_add, url, duplicate=False):
-    file_suffix = mediafile["original_file_location"][10:]
-    thumb_suffix = mediafile["thumbnail_file_location"][8:]
-    mediafile["original_file_location"] = (
-        mediafile["original_file_location"][:10] + part_to_add
-    )
-    mediafile["thumbnail_file_location"] = (
-        mediafile["thumbnail_file_location"][:8] + part_to_add
-    )
-    if not duplicate:
-        mediafile["original_file_location"] = (
-            mediafile["original_file_location"] + "-" + file_suffix
+    if duplicate:
+        mediafile["original_file_location"] = "/download/{}".format(part_to_add)
+        mediafile[
+            "thumbnail_file_location"
+        ] = "/iiif/3/{}/full/,150/0/default.jpg".format(part_to_add)
+    else:
+        original_file = mediafile["original_file_location"][10:]
+        mediafile["original_file_location"] = "/download/{}-{}".format(
+            part_to_add, original_file
         )
-        mediafile["thumbnail_file_location"] = (
-            mediafile["thumbnail_file_location"] + "-" + thumb_suffix
-        )
+        mediafile[
+            "thumbnail_file_location"
+        ] = "/iiif/3/{}-{}/full/,150/0/default.jpg".format(part_to_add, original_file)
     requests.put(
         url,
         json=mediafile,
