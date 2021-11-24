@@ -1,5 +1,5 @@
 ### Base stage
-FROM python:3.9-slim AS base-stage
+FROM python:3.10-slim AS base-stage
 
 ENV FLASK_APP=app.py
 
