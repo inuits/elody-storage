@@ -16,7 +16,7 @@ itsdangerous==1.1.0
 inuits-jwt-auth==0.0.15
 Jinja2==2.11.2
 jmespath==0.10.0
-job_helper==0.1.7
+job_helper==0.1.8
 MarkupSafe==2.0.1
 pycparser==2.20
 python-dateutil==2.8.2

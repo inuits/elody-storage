@@ -7,7 +7,10 @@ from job_helper.job_helper import JobHelper
 from storage.storage import upload_file
 
 token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
-job_helper = JobHelper(os.getenv("JOB_API_BASE_URL", "http://localhost:8000"))
+job_helper = JobHelper(
+    job_api_base_url=os.getenv("JOB_API_BASE_URL", "http://localhost:8000"),
+    static_jwt=os.getenv("STATIC_JWT", False)
+)
 
 
 def _get_url(req):
