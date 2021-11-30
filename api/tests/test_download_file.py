@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 
 @patch("resources.upload.job_helper")
-@patch("storage.storage._update_mediafile_file_location")
+@patch("storage.storage._update_mediafile_information")
 @patch("storage.storage._get_mediafile")
 class DownloadFileTest(BaseCase):
     def test_download(self, fake_job_helper, fake_update, fake_get_mediafile):

@@ -13,6 +13,7 @@ s3 = boto3.resource(
     aws_secret_access_key=os.getenv("MINIO_SECRET_KEY"),
 )
 bucket = os.getenv("MINIO_BUCKET")
+headers = {"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))}
 
 
 class DuplicateFileException(Exception):
@@ -43,54 +44,34 @@ def calculate_md5(file):
     return hash_obj.hexdigest()
 
 
-def _update_mediafile_file_location(mediafile, part_to_add, url, duplicate=False):
-    if duplicate:
-        mediafile["original_file_location"] = "/download/{}".format(part_to_add)
-        mediafile[
-            "thumbnail_file_location"
-        ] = "/iiif/3/{}/full/,150/0/default.jpg".format(part_to_add)
-    else:
-        original_file = mediafile["original_file_location"][10:]
-        mediafile["original_file_location"] = "/download/{}-{}".format(
-            part_to_add, original_file
-        )
-        mediafile[
-            "thumbnail_file_location"
-        ] = "/iiif/3/{}-{}/full/,150/0/default.jpg".format(part_to_add, original_file)
-    requests.put(
-        url,
-        json=mediafile,
-        headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))},
-    )
+def _update_mediafile_information(mediafile, new_key, url):
+    mediafile["original_filename"] = mediafile["filename"]
+    mediafile["filename"] = new_key
+    mediafile["original_file_location"] = f"/download/{new_key}"
+    mediafile["thumbnail_file_location"] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
+    requests.put(url, json=mediafile, headers=headers)
 
 
 def _get_mediafile(url):
-    req = requests.get(
-        url,
-        headers={"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))},
-    )
+    req = requests.get(url, headers=headers)
     if req.status_code != 200:
         raise Exception("Callback url did not lead to existing mediafile")
     return req.json()
 
 
 def upload_file(file, url, key=None):
-    raw_url = url + "?raw=1"
-    mediafile = _get_mediafile(raw_url)
+    mediafile = _get_mediafile(f"{url}?raw=1")
     if key is None:
         key = file.filename
     md5sum = calculate_md5(file)
     try:
         check_file_exists(file.filename, md5sum)
     except DuplicateFileException as ex:
-        _update_mediafile_file_location(mediafile, ex.existing_file, url, True)
-        error_message = (
-            ex.error_message
-            + " Mediafile & entity file locations were relinked to existing file."
-        )
+        _update_mediafile_information(mediafile, ex.existing_file, url)
+        error_message = f"{ex.error_message} Mediafile & entity file locations were relinked to existing file."
         raise DuplicateFileException(error_message)
-    key = "{}-{}".format(md5sum, key)
-    _update_mediafile_file_location(mediafile, md5sum, url)
+    key = f"{md5sum}-{key}"
+    _update_mediafile_information(mediafile, key, url)
     s3.Bucket(bucket).put_object(Key=key, Body=file)
 
 
