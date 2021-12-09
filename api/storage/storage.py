@@ -14,6 +14,7 @@ s3 = boto3.resource(
 )
 bucket = os.getenv("MINIO_BUCKET")
 headers = {"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))}
+collection_api_url = os.getenv("COLLECTION_API_URL", "http://localhost:8000")
 
 
 class DuplicateFileException(Exception):
