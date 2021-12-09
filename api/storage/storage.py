@@ -75,13 +75,13 @@ def upload_file(file, mediafile_id, key=None):
     try:
         check_file_exists(file.filename, md5sum)
     except DuplicateFileException as ex:
-        existing_mediafile = requests.get(
-            f"{collection_api_url}/mediafiles/{ex.md5sum}"
-        )
-        if existing_mediafile:
-            requests.delete(f"{collection_api_url}/mediafiles/{mediafile_id}")
+        try:
+            _get_mediafile(ex.md5sum)
+            requests.delete(
+                f"{collection_api_url}/mediafiles/{mediafile_id}", headers=headers
+            )
             error_message = f"{ex.error_message} Existing mediafile for file found, deleting new one."
-        else:
+        except Exception:
             _update_mediafile_information(
                 mediafile, ex.md5sum, ex.existing_file, mediafile_id
             )
