@@ -12,11 +12,8 @@ job_helper = JobHelper(
 )
 
 
-def _get_url(req):
-    url = req.args.get("url")
-    if not url:
-        raise Exception("No callback url provided")
-    return url
+def _get_mediafile_id(req):
+    return req.args.get("id")
 
 
 class Upload(Resource):
@@ -25,9 +22,9 @@ class Upload(Resource):
         job = job_helper.create_new_job("Upload file", "file_upload")
         job_helper.progress_job(job)
         try:
-            f = request.files["file"]
-            url = _get_url(request)
-            upload_file(f, url)
+            file = request.files["file"]
+            mediafile_id = _get_mediafile_id(request)
+            upload_file(file, mediafile_id)
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
@@ -41,9 +38,9 @@ class UploadKey(Resource):
         job = job_helper.create_new_job("Upload file", "file_upload")
         job_helper.progress_job(job)
         try:
-            f = request.files["file"]
-            url = _get_url(request)
-            upload_file(f, url, key)
+            file = request.files["file"]
+            mediafile_id = _get_mediafile_id(request)
+            upload_file(file, mediafile_id, key)
             job_helper.finish_job(job)
         except Exception as ex:
             job_helper.fail_job(job, str(ex))
