@@ -1,7 +1,5 @@
-from flask_restful import Resource
 from flask import send_from_directory
-
-import app
+from flask_restful import Resource
 
 
 class OpenAPISpec(Resource):

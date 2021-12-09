@@ -1,15 +1,11 @@
-import os
-from flask_restful import Resource, abort
-from flask import send_file, after_this_request
-
-from storage.storage import download_file
-
 import app
+
+from flask import after_this_request, send_file
+from flask_restful import Resource, abort
+from storage.storage import download_file
 
 
 class Download(Resource):
-    token_required = os.getenv("REQUIRE_TOKEN", "True").lower() in ["true", "1"]
-
     @app.require_oauth()
     def get(self, key):
         output = download_file(key)
