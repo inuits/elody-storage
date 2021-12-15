@@ -3,7 +3,9 @@ FROM python:3.10-slim AS base-stage
 
 ENV FLASK_APP=app.py
 
+RUN apt-get update && apt-get install -y libmagic1
 RUN adduser --disabled-password --home /app --shell /bin/bash app
+
 USER app
 WORKDIR /app
 
@@ -12,8 +14,6 @@ COPY docker/run-tests.sh /
 COPY docker/test-coverage.sh /
 COPY requirements.txt ./
 COPY requirements_dev.txt ./
-
-RUN mkdir -p api/downloads
 
 RUN echo "export PATH=${PATH}:/app/.local/bin" >> .bashrc
 

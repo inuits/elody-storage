@@ -1,6 +1,7 @@
 import app
+import magic
 
-from flask import after_this_request, send_file
+from flask import after_this_request, Response
 from flask_restful import Resource, abort
 from storage.storage import download_file
 
@@ -20,4 +21,12 @@ class Download(Resource):
             response.headers["Access-Control-Allow-Origin"] = "*"
             return response
 
-        return send_file(output)
+        def read_file():
+            output.seek(0, 0)
+            data = output.read(1024)
+            while data:
+                yield data
+                data = output.read(1024)
+
+        mime = magic.Magic(mime=True).from_buffer(output.read(2048))
+        return Response(read_file(), mimetype=mime)

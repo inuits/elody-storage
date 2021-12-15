@@ -1,10 +1,11 @@
+import app
 import boto3
-import botocore
 import hashlib
+import io
 import os
 import requests
 
-from pathlib import Path
+from botocore.exceptions import ClientError
 
 s3 = boto3.resource(
     "s3",
@@ -93,10 +94,9 @@ def upload_file(file, mediafile_id, key=None):
 
 
 def download_file(file_name):
-    output = f"downloads/{file_name}"
-    Path(output).parent.mkdir(parents=True, exist_ok=True)
     try:
-        s3.Bucket(bucket).download_file(file_name, output)
-    except botocore.exceptions.ClientError as e:
+        file_obj = s3.Bucket(bucket).meta.client.get_object(Bucket=bucket, Key=file_name)
+    except ClientError:
+        app.logger.error(f"File {file_name} not found")
         return None
-    return Path(output).absolute()
+    return io.BytesIO(file_obj["Body"].read())
