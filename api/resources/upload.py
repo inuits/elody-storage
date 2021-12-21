@@ -13,7 +13,9 @@ job_helper = JobHelper(
 
 
 def _get_mediafile_id(req):
-    return req.args.get("id")
+    if mediafile_id := req.args.get("id"):
+        return mediafile_id
+    raise Exception("No mediafile id provided")
 
 
 class Upload(Resource):

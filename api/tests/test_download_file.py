@@ -1,3 +1,5 @@
+import uuid
+
 from tests.base_case import BaseCase
 from unittest.mock import patch
 
@@ -12,7 +14,7 @@ class DownloadFileTest(BaseCase):
         md5 = self.calculate_md5(data["file"])
 
         self.app.post(
-            "/upload?url=http://test.com",
+            f"/upload?id={uuid.uuid4()}",
             headers={"content-type": "multipart/form-data"},
             data=data,
         )

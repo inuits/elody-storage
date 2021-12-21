@@ -1,3 +1,5 @@
+import uuid
+
 from tests.base_case import BaseCase
 from unittest.mock import patch
 
@@ -13,7 +15,7 @@ class UploadFileTest(BaseCase):
         data["file"] = "test.png"
 
         response = self.app.post(
-            "/upload?url=http://test.com",
+            f"/upload?id={uuid.uuid4()}",
             headers={"content-type": "multipart/form-data"},
             data=data,
         )
@@ -31,7 +33,7 @@ class UploadFileTest(BaseCase):
             "/upload", headers={"content-type": "multipart/form-data"}, data=data
         )
 
-        self.assertEqual("No callback url provided", response.json)
+        self.assertEqual("No mediafile id provided", response.json)
         self.assertEqual(400, response.status_code)
 
     def test_upload_with_callback_url(
@@ -41,10 +43,10 @@ class UploadFileTest(BaseCase):
         data["file"] = self.create_test_image()
 
         response = self.app.post(
-            "/upload?url=http://test.com",
+            f"/upload?id={uuid.uuid4()}",
             headers={"content-type": "multipart/form-data"},
             data=data,
         )
 
-        self.assertFalse(response.json)
+        self.assertEqual("", response.json)
         self.assertEqual(201, response.status_code)
