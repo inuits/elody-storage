@@ -77,10 +77,17 @@ def upload_file(file, mediafile_id, key=None):
         check_file_exists(file.filename, md5sum)
     except DuplicateFileException as ex:
         try:
-            _get_mediafile(ex.md5sum)
+            found_mediafile = _get_mediafile(ex.md5sum)
             requests.delete(
                 f"{collection_api_url}/mediafiles/{mediafile_id}", headers=headers
             )
+            if set(found_mediafile["metadata"]) != set(mediafile["metadata"]):
+                found_mediafile["metadata"] = mediafile["metadata"]
+                requests.put(
+                    f"{collection_api_url}/mediafiles/{ex.md5sum}",
+                    headers=headers,
+                    json=found_mediafile,
+                )
             error_message = f"{ex.error_message} Existing mediafile for file found, deleting new one."
         except Exception:
             _update_mediafile_information(
@@ -95,7 +102,9 @@ def upload_file(file, mediafile_id, key=None):
 
 def download_file(file_name):
     try:
-        file_obj = s3.Bucket(bucket).meta.client.get_object(Bucket=bucket, Key=file_name)
+        file_obj = s3.Bucket(bucket).meta.client.get_object(
+            Bucket=bucket, Key=file_name
+        )
     except ClientError:
         app.logger.error(f"File {file_name} not found")
         return None
