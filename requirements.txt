@@ -10,7 +10,7 @@ cryptography==3.4.7
 Flask-RESTful==0.3.8
 flask-swagger-ui==3.36.0
 Flask==1.1.2
-gunicorn==20.0.4
+gunicorn==20.1.0
 idna==2.10
 itsdangerous==1.1.0
 inuits-jwt-auth==0.0.15
