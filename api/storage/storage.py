@@ -3,6 +3,7 @@ import boto3
 import hashlib
 import io
 import os
+import piexif
 import requests
 
 from botocore.exceptions import ClientError
@@ -68,6 +69,30 @@ def _get_mediafile(mediafile_id):
     return req.json()
 
 
+def add_exif_data(image, metadata):
+    if not len(metadata):
+        return
+    merged_metadata = {
+        "rights": "",
+        "copyright": "",
+        "photographer": "",
+        "source": "",
+    }
+    image_bytes = image.read()
+    image.seek(0)
+    exif = piexif.load(image_bytes)
+    for item in metadata:
+        merged_metadata[item["key"]] = item["value"]
+    artist = f'{merged_metadata.get("photographer")} - {merged_metadata.get("source")}'
+    copyrights = f'{merged_metadata.get("rights")} - {merged_metadata.get("copyright")}'
+    exif["0th"][piexif.ImageIFD.Artist] = artist.encode("UTF-8")
+    exif["0th"][piexif.ImageIFD.Copyright] = copyrights.encode("UTF-8")
+    exif_bytes = piexif.dump(exif)
+    image_copy = io.BytesIO()
+    piexif.insert(exif_bytes, image_bytes, image_copy)
+    image.stream = image_copy
+
+
 def upload_file(file, mediafile_id, key=None):
     mediafile = _get_mediafile(mediafile_id)
     if key is None:
@@ -88,6 +113,8 @@ def upload_file(file, mediafile_id, key=None):
                     headers=headers,
                     json=found_mediafile,
                 )
+                add_exif_data(file, mediafile["metadata"])
+                s3.Bucket(bucket).put_object(Key=ex.existing_file, Body=file)
             error_message = f"{ex.error_message} Existing mediafile for file found, deleting new one."
         except Exception:
             _update_mediafile_information(
@@ -97,6 +124,7 @@ def upload_file(file, mediafile_id, key=None):
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id)
+    add_exif_data(file, mediafile["metadata"])
     s3.Bucket(bucket).put_object(Key=key, Body=file)
 
 
