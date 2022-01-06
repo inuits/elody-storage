@@ -124,6 +124,8 @@ def upload_file(file, mediafile_id, key=None):
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id)
+    if "metadata" not in mediafile:
+        mediafile["metadata"] = []
     add_exif_data(file, mediafile["metadata"])
     s3.Bucket(bucket).put_object(Key=key, Body=file)
 
