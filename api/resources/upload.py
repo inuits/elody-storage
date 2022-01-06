@@ -1,6 +1,7 @@
 import app
 import os
 
+import traceback
 from flask import request
 from flask_restful import Resource
 from job_helper.job_helper import JobHelper
@@ -29,7 +30,7 @@ class Upload(Resource):
             upload_file(file, mediafile_id, key)
             job_helper.finish_job(job)
         except Exception as ex:
-            job_helper.fail_job(job, str(ex))
+            job_helper.fail_job(job, str(ex)+ " trace: " + traceback.format_exc())
             return str(ex), 400
         return "", 201
 
