@@ -113,7 +113,7 @@ def upload_file(file, mediafile_id, key=None):
                     headers=headers,
                     json=found_mediafile,
                 )
-                add_exif_data(file, mediafile["metadata"])
+                # add_exif_data(file, mediafile["metadata"])
                 s3.Bucket(bucket).put_object(Key=ex.existing_file, Body=file)
             error_message = f"{ex.error_message} Existing mediafile for file found, deleting new one."
         except Exception:
@@ -126,7 +126,7 @@ def upload_file(file, mediafile_id, key=None):
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id)
     if "metadata" not in mediafile:
         mediafile["metadata"] = []
-    add_exif_data(file, mediafile["metadata"])
+    # add_exif_data(file, mediafile["metadata"])
     s3.Bucket(bucket).put_object(Key=key, Body=file)
 
 
