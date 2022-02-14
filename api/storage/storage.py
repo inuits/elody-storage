@@ -34,7 +34,7 @@ def check_file_exists(filename, md5sum):
     if len(objects.get("Contents", [])):
         existing_file = objects.get("Contents", [])[0]["Key"]
         error_message = (
-            f"Duplicate file {filename} matches existing file {existing_file}"
+            f"Duplicate file {filename} matches existing file {existing_file}."
         )
         raise DuplicateFileException(error_message, existing_file, md5sum)
 
@@ -93,6 +93,18 @@ def add_exif_data(image, metadata):
     image.stream = image_copy
 
 
+def _is_metadata_updated(old_metadata, new_metadata):
+    if len(old_metadata) != len(new_metadata):
+        return True
+    unmatched = list(old_metadata)
+    for item in new_metadata:
+        try:
+            unmatched.remove(item)
+        except ValueError:
+            return True
+    return len(unmatched) > 0
+
+
 def upload_file(file, mediafile_id, key=None):
     mediafile = _get_mediafile(mediafile_id)
     if key is None:
@@ -103,24 +115,28 @@ def upload_file(file, mediafile_id, key=None):
     except DuplicateFileException as ex:
         try:
             found_mediafile = _get_mediafile(ex.md5sum)
-            requests.delete(
-                f"{collection_api_url}/mediafiles/{mediafile_id}", headers=headers
-            )
-            if set(found_mediafile["metadata"]) != set(mediafile["metadata"]):
-                found_mediafile["metadata"] = mediafile["metadata"]
-                requests.put(
-                    f"{collection_api_url}/mediafiles/{ex.md5sum}",
-                    headers=headers,
-                    json=found_mediafile,
-                )
-                # add_exif_data(file, mediafile["metadata"])
-                s3.Bucket(bucket).put_object(Key=ex.existing_file, Body=file)
-            error_message = f"{ex.error_message} Existing mediafile for file found, deleting new one."
         except Exception:
             _update_mediafile_information(
                 mediafile, ex.md5sum, ex.existing_file, mediafile_id
             )
             error_message = f"{ex.error_message} No existing mediafile for file found, not deleting new one."
+            raise DuplicateFileException(error_message)
+        requests.delete(
+            f"{collection_api_url}/mediafiles/{mediafile_id}", headers=headers
+        )
+        error_message = (
+            f"{ex.error_message} Existing mediafile for file found, deleting new one."
+        )
+        if _is_metadata_updated(found_mediafile["metadata"], mediafile["metadata"]):
+            error_message = f"{error_message} Metadata not up-to-date, updating."
+            found_mediafile["metadata"] = mediafile["metadata"]
+            requests.put(
+                f"{collection_api_url}/mediafiles/{ex.md5sum}",
+                headers=headers,
+                json=found_mediafile,
+            )
+            # add_exif_data(file, mediafile["metadata"])
+            # s3.Bucket(bucket).put_object(Key=ex.existing_file, Body=file)
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id)
