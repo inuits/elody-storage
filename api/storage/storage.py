@@ -74,30 +74,6 @@ def _get_mediafile(mediafile_id):
     return req.json()
 
 
-def add_exif_data(image, metadata):
-    if not len(metadata):
-        return
-    merged_metadata = {
-        "rights": "",
-        "copyright": "",
-        "photographer": "",
-        "source": "",
-    }
-    image_bytes = image.read()
-    image.seek(0)
-    exif = piexif.load(image_bytes)
-    for item in metadata:
-        merged_metadata[item["key"]] = item["value"]
-    artist = f'{merged_metadata.get("photographer")} - {merged_metadata.get("source")}'
-    copyrights = f'{merged_metadata.get("rights")} - {merged_metadata.get("copyright")}'
-    exif["0th"][piexif.ImageIFD.Artist] = artist.encode("UTF-8")
-    exif["0th"][piexif.ImageIFD.Copyright] = copyrights.encode("UTF-8")
-    exif_bytes = piexif.dump(exif)
-    image_copy = io.BytesIO()
-    piexif.insert(exif_bytes, image_bytes, image_copy)
-    image.stream = image_copy
-
-
 def _is_metadata_updated(old_metadata, new_metadata):
     if len(old_metadata) != len(new_metadata):
         return True
@@ -181,3 +157,36 @@ def download_file(file_name):
         app.logger.error(f"File {file_name} not found")
         return None
     return io.BytesIO(file_obj["Body"].read())
+
+
+def _get_exif_strings(metadata):
+    merged_metadata = {
+        "copyright": "",
+        "photographer": "",
+        "rights": "",
+        "source": "",
+    }
+    for item in metadata:
+        merged_metadata[item["key"]] = item["value"]
+    artist = merged_metadata.get("source")
+    if photographer := merged_metadata.get("photographer"):
+        artist = f"{artist} - {photographer}"
+    rights = merged_metadata.get("rights")
+    if copyrights := merged_metadata.get("copyright"):
+        rights = f"{rights - copyrights}"
+    return {"artist": artist, "copyright": rights}
+
+
+def add_exif_data(mediafile):
+    if "metadata" not in mediafile or not len(mediafile["metadata"]):
+        return
+    image = download_file(mediafile["filename"])
+    image_bytes = image.read()
+    exif = piexif.load(image_bytes)
+    exif_strings = _get_exif_strings(mediafile["metadata"])
+    exif["0th"][piexif.ImageIFD.Artist] = exif_strings["artist"].encode("UTF-8")
+    exif["0th"][piexif.ImageIFD.Copyright] = exif_strings["copyright"].encode("UTF-8")
+    exif_bytes = piexif.dump(exif)
+    ret_image = io.BytesIO()
+    piexif.insert(exif_bytes, image_bytes, ret_image)
+    s3.Bucket(bucket).put_object(Key=mediafile["filename"], Body=ret_image.read())

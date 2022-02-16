@@ -8,6 +8,7 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from job_helper.job_helper import JobHelper
+from storage import storage
 
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
@@ -53,6 +54,8 @@ ramq.init_app(app=app)
 @ramq.queue(exchange_name="dams", routing_key="dams.file_uploaded")
 def handle_file_uploaded(body):
     data = json.loads(body)["data"]
+    if "image" in data["mimetype"]:
+        storage.add_exif_data(data["mediafile"])
     return True
 
 
