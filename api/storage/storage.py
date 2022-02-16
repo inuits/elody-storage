@@ -2,11 +2,15 @@ import app
 import boto3
 import hashlib
 import io
+import json
+import magic
 import os
 import piexif
 import requests
+import uuid
 
 from botocore.exceptions import ClientError
+from cloudevents.http import CloudEvent, to_json
 
 s3 = boto3.resource(
     "s3",
@@ -17,6 +21,7 @@ s3 = boto3.resource(
 bucket = os.getenv("MINIO_BUCKET")
 headers = {"Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))}
 collection_api_url = os.getenv("COLLECTION_API_URL", "http://localhost:8000")
+storage_api_url = os.getenv("STORAGE_API_URL", "http://localhost:8001")
 
 
 class DuplicateFileException(Exception):
@@ -105,6 +110,27 @@ def _is_metadata_updated(old_metadata, new_metadata):
     return len(unmatched) > 0
 
 
+def _signal_file_uploaded(mediafile, mimetype, url):
+    message_id = str(uuid.uuid4())
+    attributes = {
+        "id": message_id,
+        "message_id": message_id,
+        "type": "dams.file_uploaded",
+        "source": "dams",
+    }
+    data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
+    event = CloudEvent(attributes, data)
+    message = json.loads(to_json(event))
+    app.ramq.send(message, routing_key="dams.file_uploaded", exchange_name="dams")
+
+
+def _get_file_mimetype(file):
+    file.seek(0, 0)
+    mime = magic.Magic(mime=True).from_buffer(file.read(2048))
+    file.seek(0, 0)
+    return mime
+
+
 def upload_file(file, mediafile_id, key=None):
     mediafile = _get_mediafile(mediafile_id)
     if key is None:
@@ -135,15 +161,15 @@ def upload_file(file, mediafile_id, key=None):
                 headers=headers,
                 json=found_mediafile,
             )
-            # add_exif_data(file, mediafile["metadata"])
-            # s3.Bucket(bucket).put_object(Key=ex.existing_file, Body=file)
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id)
-    if "metadata" not in mediafile:
-        mediafile["metadata"] = []
-    # add_exif_data(file, mediafile["metadata"])
     s3.Bucket(bucket).put_object(Key=key, Body=file)
+    _signal_file_uploaded(
+        mediafile,
+        _get_file_mimetype(file),
+        f'{storage_api_url}{mediafile["original_file_location"]}',
+    )
 
 
 def download_file(file_name):
