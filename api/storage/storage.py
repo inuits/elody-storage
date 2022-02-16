@@ -173,7 +173,7 @@ def _get_exif_strings(metadata):
         artist = f"{artist} - {photographer}"
     rights = merged_metadata.get("rights")
     if copyrights := merged_metadata.get("copyright"):
-        rights = f"{rights - copyrights}"
+        rights = f"{rights} - {copyrights}"
     return {"artist": artist, "copyright": rights}
 
 
