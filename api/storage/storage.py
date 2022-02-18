@@ -141,6 +141,21 @@ def upload_file(file, mediafile_id, key=None):
     )
 
 
+def upload_transcode(file, mediafile_id):
+    mediafile = _get_mediafile(mediafile_id)
+    md5sum = calculate_md5(file)
+    key = f'{md5sum}-transcode-{mediafile["original_filename"]}'
+    check_file_exists(key, md5sum)
+    s3.Bucket(bucket).put_object(Key=key, Body=file)
+    mediafile["transcode-file-location"] = f"/download/{key}"
+    mediafile["thumbnail_file_location"] = f"/iiif/3/{key}/full/,150/0/default.jpg"
+    requests.put(
+        f"{collection_api_url}/mediafiles/{mediafile_id}",
+        headers=headers,
+        json=mediafile,
+    )
+
+
 def download_file(file_name):
     try:
         file_obj = s3.Bucket(bucket).meta.client.get_object(

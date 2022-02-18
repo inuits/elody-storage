@@ -76,13 +76,14 @@ require_oauth.register_token_validator(validator)
 app.register_blueprint(swaggerui_blueprint)
 
 from resources.download import Download
-from resources.upload import Upload, UploadKey
+from resources.upload import Upload, UploadKey, UploadTranscode
 from resources.spec import AsyncAPISpec, OpenAPISpec
 
 api.add_resource(Download, "/download/<string:key>")
 
 api.add_resource(Upload, "/upload")
 api.add_resource(UploadKey, "/upload/<string:key>")
+api.add_resource(UploadTranscode, "/upload/transcode")
 
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
