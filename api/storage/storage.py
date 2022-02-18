@@ -7,7 +7,6 @@ import magic
 import os
 import piexif
 import requests
-import uuid
 
 from botocore.exceptions import ClientError
 from cloudevents.http import CloudEvent, to_json
@@ -87,17 +86,11 @@ def _is_metadata_updated(old_metadata, new_metadata):
 
 
 def _signal_file_uploaded(mediafile, mimetype, url):
-    message_id = str(uuid.uuid4())
-    attributes = {
-        "id": message_id,
-        "message_id": message_id,
-        "type": "dams.file_uploaded",
-        "source": "dams",
-    }
+    attributes = {"type": "dams.file_uploaded", "source": "dams"}
     data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
     event = CloudEvent(attributes, data)
     message = json.loads(to_json(event))
-    app.ramq.send(message, routing_key="dams.file_uploaded", exchange_name="dams")
+    app.rabbit.send(message, routing_key="dams.file_uploaded")
 
 
 def _get_file_mimetype(file):

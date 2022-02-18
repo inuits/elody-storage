@@ -3,11 +3,11 @@ import logging
 import os
 
 from flask import Flask
-from flask_rabmq import RabbitMQ
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from job_helper.job_helper import JobHelper
+from rabbitmq_pika_flask import RabbitMQ
 from storage import storage
 
 
@@ -24,9 +24,8 @@ api = Api(app)
 
 app.config.update(
     {
-        "RABMQ_RABBITMQ_URL": os.getenv("RABMQ_RABBITMQ_URL", "amqp://localhost:5672"),
-        "RABMQ_SEND_EXCHANGE_NAME": os.getenv("RABMQ_SEND_EXCHANGE_NAME", "dams"),
-        "RABMQ_SEND_EXCHANGE_TYPE": "topic",
+        "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME", "dams"),
+        "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL", "amqp://localhost:5672"),
         "SECRET_KEY": "SomethingNotEntirelySecret",
         "TESTING": True,
         "DEBUG": True,
@@ -47,19 +46,17 @@ job_helper = JobHelper(
 )
 """
 
-ramq = RabbitMQ()
-ramq.init_app(app=app)
+rabbit = RabbitMQ()
+rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 
-@ramq.queue(exchange_name="dams", routing_key="dams.file_uploaded")
-def handle_file_uploaded(body):
-    data = json.loads(body)["data"]
+@rabbit.queue("dams.file_uploaded")
+def handle_file_uploaded(routing_key, body, message_id):
+    data = body["data"]
     if "image" in data["mimetype"]:
         storage.add_exif_data(data["mediafile"])
     return True
 
-
-ramq.run_consumer()
 
 require_oauth = MyResourceProtector(
     os.getenv("STATIC_JWT", False),
