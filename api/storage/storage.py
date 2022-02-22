@@ -148,12 +148,14 @@ def upload_transcode(file, mediafile_id):
     key = f"{md5sum}-transcode-{new_filename}"
     check_file_exists(key, md5sum)
     s3.Bucket(bucket).put_object(Key=key, Body=file)
-    mediafile["transcode-file-location"] = f"/download/{key}"
-    mediafile["thumbnail_file_location"] = f"/iiif/3/{key}/full/,150/0/default.jpg"
-    requests.put(
+    data = {
+        "transcode_file_location": f"/download/{key}",
+        "thumbnail_file_location": f"/iiif/3/{key}/full/,150/0/default.jpg",
+    }
+    requests.patch(
         f"{collection_api_url}/mediafiles/{mediafile_id}",
         headers=headers,
-        json=mediafile,
+        json=data,
     )
 
 
