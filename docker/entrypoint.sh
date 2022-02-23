@@ -23,6 +23,7 @@ if [ "$APP_ENV" = "dev" ]; then
   exec ~/.local/bin/flask run --host=0.0.0.0
 else
   echo "Starting gunicorn server..."
+  export FLASK_ENV=production
   cd ~/api
   exec ~/.local/bin/gunicorn ${GUNICORN_SSL_CA} -b 0.0.0.0 --timeout 120 "app:app"
 fi
