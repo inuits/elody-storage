@@ -53,8 +53,24 @@ rabbit.init_app(app, "basic", json.loads, json.dumps)
 @rabbit.queue("dams.file_uploaded")
 def handle_file_uploaded(routing_key, body, message_id):
     data = body["data"]
-    if "image" in data["mimetype"]:
-        storage.add_exif_data(data["mediafile"])
+    if "mediafile" not in data or "mimetype" not in data or "url" not in data:
+        return True
+    if "metadata" not in data["mediafile"] or not len(data["mediafile"]["metadata"]):
+        return True
+    storage.add_exif_data(data["mediafile"], data["mimetype"])
+    return True
+
+
+@rabbit.queue("dams.mediafile_changed")
+def handle_mediafile_updated(routing_key, body, message_id):
+    data = body["data"]
+    if "old_mediafile" not in data or "mediafile" not in data:
+        return True
+    if not storage.is_metadata_updated(
+        data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
+    ):
+        return True
+    storage.add_exif_data(data["mediafile"])
     return True
 
 

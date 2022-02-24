@@ -73,7 +73,7 @@ def _get_mediafile(mediafile_id):
     return req.json()
 
 
-def _is_metadata_updated(old_metadata, new_metadata):
+def is_metadata_updated(old_metadata, new_metadata):
     if len(old_metadata) != len(new_metadata):
         return True
     unmatched = list(old_metadata)
@@ -122,7 +122,7 @@ def upload_file(file, mediafile_id, key=None):
         error_message = (
             f"{ex.error_message} Existing mediafile for file found, deleting new one."
         )
-        if _is_metadata_updated(found_mediafile["metadata"], mediafile["metadata"]):
+        if is_metadata_updated(found_mediafile["metadata"], mediafile["metadata"]):
             error_message = f"{error_message} Metadata not up-to-date, updating."
             found_mediafile["metadata"] = mediafile["metadata"]
             requests.put(
@@ -176,7 +176,7 @@ def _get_exif_strings(metadata):
         "photographer": "",
         "rights": "",
         "source": "",
-        "publication_status": ""
+        "publication_status": "",
     }
     for item in metadata:
         merged_metadata[item["key"]] = item["value"]
@@ -189,10 +189,12 @@ def _get_exif_strings(metadata):
     return {"artist": artist, "copyright": rights}
 
 
-def add_exif_data(mediafile):
-    if "metadata" not in mediafile or not len(mediafile["metadata"]):
+def add_exif_data(mediafile, mimetype=""):
+    if mimetype and "image" not in mimetype:
         return
     image = download_file(mediafile["filename"])
+    if not mimetype and "image" not in _get_file_mimetype(image):
+        return
     image_bytes = image.read()
     exif = piexif.load(image_bytes)
     exif_strings = _get_exif_strings(mediafile["metadata"])
