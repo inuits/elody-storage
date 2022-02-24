@@ -176,6 +176,7 @@ def _get_exif_strings(metadata):
         "photographer": "",
         "rights": "",
         "source": "",
+        "publication_status": ""
     }
     for item in metadata:
         merged_metadata[item["key"]] = item["value"]
