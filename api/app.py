@@ -66,7 +66,7 @@ def handle_mediafile_updated(routing_key, body, message_id):
     data = body["data"]
     if "old_mediafile" not in data or "mediafile" not in data:
         return True
-    if not storage.is_metadata_updated(
+    if "metadata" not in data["mediafile"] or not storage.is_metadata_updated(
         data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
     ):
         return True
