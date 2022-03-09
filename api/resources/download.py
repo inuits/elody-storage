@@ -7,7 +7,7 @@ from storage.storage import download_file
 
 
 class Download(Resource):
-    @app.require_oauth()
+    @app.require_oauth("download-file")
     def get(self, key):
         output = download_file(key)
         if output is None:
