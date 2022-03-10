@@ -19,7 +19,7 @@ def _get_mediafile_id(req):
 
 
 class Upload(Resource):
-    @app.require_oauth("upload-file")
+    @app.require_oauth()
     def post(self, key=None):
         job = job_helper.create_new_job("Upload file", "file_upload")
         job_helper.progress_job(job)
@@ -35,7 +35,7 @@ class Upload(Resource):
 
 
 class UploadKey(Upload):
-    @app.require_oauth("upload-key")
+    @app.require_oauth()
     def post(self, key):
         return super().post(key)
 
