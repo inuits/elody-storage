@@ -35,13 +35,13 @@ class Upload(Resource):
 
 
 class UploadKey(Upload):
-    @app.require_oauth("upload-key")
+    @app.require_oauth("upload-file-key")
     def post(self, key):
         return super().post(key)
 
 
 class UploadTranscode(Resource):
-    @app.require_oauth()
+    @app.require_oauth("upload-transcode")
     def post(self):
         job = job_helper.create_new_job("Upload transcode", "transcode_upload")
         job_helper.progress_job(job)
