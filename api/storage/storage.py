@@ -124,11 +124,11 @@ def upload_file(file, mediafile_id, key=None):
         )
         if is_metadata_updated(found_mediafile["metadata"], mediafile["metadata"]):
             error_message = f"{error_message} Metadata not up-to-date, updating."
-            found_mediafile["metadata"] = mediafile["metadata"]
-            requests.put(
+            payload = {"metadata": mediafile["metadata"]}
+            requests.patch(
                 f"{collection_api_url}/mediafiles/{ex.md5sum}",
                 headers=headers,
-                json=found_mediafile,
+                json=payload,
             )
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
