@@ -148,7 +148,9 @@ def upload_transcode(file, mediafile_id):
     key = f"{md5sum}-transcode-{new_filename}"
     check_file_exists(key, md5sum)
     s3.Bucket(bucket).put_object(Key=key, Body=file)
+    mediafile["identifiers"].append(md5sum)
     data = {
+        "identifiers": mediafile["identifiers"],
         "transcode_file_location": f"/download/{key}",
         "thumbnail_file_location": f"/iiif/3/{key}/full/,150/0/default.jpg",
     }
