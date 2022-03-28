@@ -2,14 +2,15 @@ import json
 import logging
 import os
 
+import requests
 from flask import Flask
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
+from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from job_helper.job_helper import JobHelper
 from rabbitmq_pika_flask import RabbitMQ
 from storage import storage
-
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = (
@@ -50,6 +51,20 @@ rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 
+def collection_api_available():
+    return True, requests.get(f'{os.getenv("COLLECTION_API_URL", "http://collection-api:8000")}{"/health"}').json()
+
+
+def rabbit_available():
+    return True, rabbit.get_connection().is_open
+
+
+health = HealthCheck()
+health.add_check(collection_api_available)
+health.add_check(rabbit_available)
+app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
+
+
 @rabbit.queue("dams.file_uploaded")
 def handle_file_uploaded(routing_key, body, message_id):
     data = body["data"]
@@ -67,7 +82,7 @@ def handle_mediafile_updated(routing_key, body, message_id):
     if "old_mediafile" not in data or "mediafile" not in data:
         return True
     if "metadata" not in data["mediafile"] or not storage.is_metadata_updated(
-        data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
+            data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
     ):
         return True
     storage.add_exif_data(data["mediafile"])
