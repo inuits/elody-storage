@@ -7,7 +7,7 @@ from job_helper.job_helper import JobHelper
 from storage.storage import upload_file, upload_transcode
 
 job_helper = JobHelper(
-    job_api_base_url=os.getenv("JOB_API_BASE_URL", "http://localhost:8000"),
+    job_api_base_url=os.getenv("JOB_API_BASE_URL"),
     static_jwt=os.getenv("STATIC_JWT", False),
 )
 

@@ -25,8 +25,8 @@ api = Api(app)
 
 app.config.update(
     {
-        "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME", "dams"),
-        "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL", "amqp://localhost:5672"),
+        "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME"),
+        "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL"),
         "SECRET_KEY": "SomethingNotEntirelySecret",
         "TESTING": True,
         "DEBUG": True,
@@ -42,7 +42,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 """
 job_helper = JobHelper(
-    job_api_base_url=os.getenv("JOB_API_BASE_URL", "http://collection-api:8000"),
+    job_api_base_url=os.getenv("JOB_API_BASE_URL"),
     static_jwt=os.getenv("STATIC_JWT", False),
 )
 """
@@ -52,7 +52,7 @@ rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 
 def collection_api_available():
-    return True, requests.get(f'{os.getenv("COLLECTION_API_URL", "http://collection-api:8000")}{"/health"}').json()
+    return True, requests.get(f'{os.getenv("COLLECTION_API_URL")}{"/health"}').json()
 
 
 def rabbit_available():
