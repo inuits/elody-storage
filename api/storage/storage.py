@@ -169,7 +169,7 @@ def download_file(file_name):
     except ClientError:
         app.logger.error(f"File {file_name} not found")
         return None
-    return io.BytesIO(file_obj["Body"].read())
+    return file_obj["Body"]
 
 
 def _get_exif_strings(metadata):

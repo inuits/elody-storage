@@ -15,6 +15,7 @@ class Download(Resource):
                 404,
                 message="File {} doesn't exist".format(key),
             )
+        first_bytes = output.read(2048)
 
         @after_this_request
         def add_header(response):
@@ -22,11 +23,10 @@ class Download(Resource):
             return response
 
         def read_file():
-            output.seek(0, 0)
-            data = output.read(1024)
+            data = first_bytes
             while data:
                 yield data
                 data = output.read(1024)
 
-        mime = magic.Magic(mime=True).from_buffer(output.read(2048))
+        mime = magic.Magic(mime=True).from_buffer(first_bytes)
         return Response(read_file(), mimetype=mime)
