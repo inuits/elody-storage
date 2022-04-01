@@ -51,12 +51,13 @@ def calculate_md5(file):
     return hash_obj.hexdigest()
 
 
-def _update_mediafile_information(mediafile, md5sum, new_key, mediafile_id):
+def _update_mediafile_information(mediafile, md5sum, new_key, mediafile_id, mimetype):
     mediafile["identifiers"].append(md5sum)
     mediafile["original_filename"] = mediafile["filename"]
     mediafile["filename"] = new_key
     mediafile["original_file_location"] = f"/download/{new_key}"
     mediafile["thumbnail_file_location"] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
+    mediafile["mimetype"] = mimetype
     requests.put(
         f"{collection_api_url}/mediafiles/{mediafile_id}",
         json=mediafile,
@@ -105,6 +106,7 @@ def upload_file(file, mediafile_id, key=None):
     if key is None:
         key = file.filename
     md5sum = calculate_md5(file)
+    mimetype = _get_file_mimetype(file)
     try:
         check_file_exists(file.filename, md5sum)
     except DuplicateFileException as ex:
@@ -112,7 +114,7 @@ def upload_file(file, mediafile_id, key=None):
             found_mediafile = _get_mediafile(ex.md5sum)
         except Exception:
             _update_mediafile_information(
-                mediafile, ex.md5sum, ex.existing_file, mediafile_id
+                mediafile, ex.md5sum, ex.existing_file, mediafile_id, mimetype
             )
             error_message = f"{ex.error_message} No existing mediafile for file found, not deleting new one."
             raise DuplicateFileException(error_message)
@@ -132,12 +134,10 @@ def upload_file(file, mediafile_id, key=None):
             )
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
-    _update_mediafile_information(mediafile, md5sum, key, mediafile_id)
+    _update_mediafile_information(mediafile, md5sum, key, mediafile_id, mimetype)
     s3.Bucket(bucket).put_object(Key=key, Body=file)
     _signal_file_uploaded(
-        mediafile,
-        _get_file_mimetype(file),
-        f'{storage_api_url}{mediafile["original_file_location"]}',
+        mediafile, mimetype, f'{storage_api_url}{mediafile["original_file_location"]}'
     )
 
 
