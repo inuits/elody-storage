@@ -69,24 +69,22 @@ app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 def handle_file_uploaded(routing_key, body, message_id):
     data = body["data"]
     if "mediafile" not in data or "mimetype" not in data or "url" not in data:
-        return True
+        return
     if "metadata" not in data["mediafile"] or not len(data["mediafile"]["metadata"]):
-        return True
+        return
     storage.add_exif_data(data["mediafile"], data["mimetype"])
-    return True
 
 
 @rabbit.queue("dams.mediafile_changed")
 def handle_mediafile_updated(routing_key, body, message_id):
     data = body["data"]
     if "old_mediafile" not in data or "mediafile" not in data:
-        return True
+        return
     if "metadata" not in data["mediafile"] or not storage.is_metadata_updated(
             data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
     ):
-        return True
+        return
     storage.add_exif_data(data["mediafile"])
-    return True
 
 
 require_oauth = MyResourceProtector(
