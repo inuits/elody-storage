@@ -151,6 +151,7 @@ def upload_transcode(file, mediafile_id):
     mediafile["identifiers"].append(md5sum)
     data = {
         "identifiers": mediafile["identifiers"],
+        "transcode_filename": key,
         "transcode_file_location": f"/download/{key}",
         "thumbnail_file_location": f"/iiif/3/{key}/full/,150/0/default.jpg",
     }
