@@ -207,3 +207,16 @@ def add_exif_data(mediafile, mimetype=""):
     ret_image = io.BytesIO()
     piexif.insert(exif_bytes, image_bytes, ret_image)
     s3.Bucket(bucket).put_object(Key=mediafile["filename"], Body=ret_image.read())
+
+
+def delete_file(mediafile):
+    try:
+        s3.Bucket(bucket).meta.client.delete_object(
+            Bucket=bucket, Key=mediafile["filename"]
+        )
+        if "transcode_filename" in mediafile:
+            s3.Bucket(bucket).meta.client.delete_object(
+                Bucket=bucket, Key=mediafile["transcode_filename"]
+            )
+    except ClientError as ce:
+        app.logger.error(f"Failed to delete file(s) {ce}")

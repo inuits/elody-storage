@@ -51,10 +51,6 @@ rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 
-def collection_api_available():
-    return True, requests.get(f'{os.getenv("COLLECTION_API_URL")}{"/health"}').json()
-
-
 def rabbit_available():
     return True, rabbit.get_connection().is_open
 
@@ -81,10 +77,18 @@ def handle_mediafile_updated(routing_key, body, message_id):
     if "old_mediafile" not in data or "mediafile" not in data:
         return
     if "metadata" not in data["mediafile"] or not storage.is_metadata_updated(
-            data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
+        data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
     ):
         return
     storage.add_exif_data(data["mediafile"])
+
+
+@rabbit.queue("dams.mediafile_deleted")
+def handle_mediafile_deleted(routing_key, body, message_id):
+    data = body["data"]
+    if "mediafile" not in data or "linked_entities" not in data:
+        return
+    storage.delete_file(data["mediafile"])
 
 
 require_oauth = MyResourceProtector(
