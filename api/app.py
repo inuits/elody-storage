@@ -80,7 +80,8 @@ def handle_mediafile_updated(routing_key, body, message_id):
         data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
     ):
         return
-    storage.add_exif_data(data["mediafile"])
+    mimetype = data["mediafile"]["mimetype"] if "mimetype" in data["mediafile"] else ""
+    storage.add_exif_data(data["mediafile"], mimetype)
 
 
 @rabbit.queue("dams.mediafile_deleted")

@@ -192,7 +192,7 @@ def _get_exif_strings(metadata):
     return {"artist": artist, "copyright": rights}
 
 
-def add_exif_data(mediafile, mimetype=""):
+def add_exif_data(mediafile, mimetype):
     if mimetype and "image" not in mimetype:
         return
     image = download_file(mediafile["filename"])
