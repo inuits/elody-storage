@@ -15,7 +15,7 @@ class Download(Resource):
                 404,
                 message="File {} doesn't exist".format(key),
             )
-        first_bytes = output.read(2048)
+        first_bytes = output.read(8192)
 
         @after_this_request
         def add_header(response):

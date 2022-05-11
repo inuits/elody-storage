@@ -102,7 +102,7 @@ def __get_mimetype_from_filename(filename):
 
 def _get_file_mimetype(file):
     file.seek(0, 0)
-    mime = magic.Magic(mime=True).from_buffer(file.read(2048))
+    mime = magic.Magic(mime=True).from_buffer(file.read(8192))
     file.seek(0, 0)
     if mime == "application/octet-stream":
         mime = __get_mimetype_from_filename(file.filename)
