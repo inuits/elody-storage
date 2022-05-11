@@ -1,14 +1,14 @@
 import uuid
 
 from tests.base_case import BaseCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 
-@patch("resources.upload.job_helper")
-@patch("storage.storage._update_mediafile_information")
-@patch("storage.storage._get_mediafile")
+@patch("app.rabbit", new=MagicMock())
+@patch("storage.storage._update_mediafile_information", new=MagicMock())
+@patch("storage.storage._get_mediafile", new=MagicMock())
 class DownloadFileTest(BaseCase):
-    def test_download(self, fake_job_helper, fake_update, fake_get_mediafile):
+    def test_download(self):
         data = dict()
         data["file"] = self.create_test_image()
         md5 = self.calculate_md5(data["file"])
@@ -23,9 +23,7 @@ class DownloadFileTest(BaseCase):
 
         self.assertEqual(200, response.status_code)
 
-    def test_download_non_existent_image(
-        self, fake_job_helper, fake_update, fake_get_mediafile
-    ):
+    def test_download_non_existent_image(self):
         response = self.app.get("/download/test.png")
 
         self.assertEqual(1, len(response.json))

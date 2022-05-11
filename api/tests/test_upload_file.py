@@ -1,21 +1,15 @@
 import uuid
 
 from tests.base_case import BaseCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 
-@patch("resources.upload.job_helper")
-@patch("storage.storage._update_mediafile_information")
-@patch("storage.storage._get_mediafile")
-@patch("storage.storage._signal_file_uploaded")
+@patch("app.rabbit", new=MagicMock())
+@patch("storage.storage._update_mediafile_information", new=MagicMock())
+@patch("storage.storage._get_mediafile", new=MagicMock())
+@patch("storage.storage._signal_file_uploaded", new=MagicMock())
 class UploadFileTest(BaseCase):
-    def test_upload_invalid_file(
-        self,
-        fake_job_helper,
-        fake_update,
-        fake_get_mediafile,
-        fake_signal_file_uploaded,
-    ):
+    def test_upload_invalid_file(self):
         data = dict()
         data["file"] = "test.png"
 
@@ -28,13 +22,7 @@ class UploadFileTest(BaseCase):
         self.assertEqual(93, len(response.json))
         self.assertEqual(400, response.status_code)
 
-    def test_upload_no_callback_url(
-        self,
-        fake_job_helper,
-        fake_update,
-        fake_get_mediafile,
-        fake_signal_file_uploaded,
-    ):
+    def test_upload_no_callback_url(self):
         data = dict()
         data["file"] = self.create_test_image()
 
@@ -45,13 +33,7 @@ class UploadFileTest(BaseCase):
         self.assertEqual("No mediafile id provided", response.json)
         self.assertEqual(400, response.status_code)
 
-    def test_upload_with_callback_url(
-        self,
-        fake_job_helper,
-        fake_update,
-        fake_get_mediafile,
-        fake_signal_file_uploaded,
-    ):
+    def test_upload_with_callback_url(self):
         data = dict()
         data["file"] = self.create_test_image()
 

@@ -2,13 +2,11 @@ import json
 import logging
 import os
 
-import requests
 from flask import Flask
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
-from job_helper.job_helper import JobHelper
 from rabbitmq_pika_flask import RabbitMQ
 from storage import storage
 
@@ -38,14 +36,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
     level=logging.INFO,
 )
-
 logger = logging.getLogger(__name__)
-"""
-job_helper = JobHelper(
-    job_api_base_url=os.getenv("JOB_API_BASE_URL"),
-    static_jwt=os.getenv("STATIC_JWT", False),
-)
-"""
 
 rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
