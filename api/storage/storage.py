@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import magic
+import mimetypes
 import os
 import piexif
 import requests
@@ -94,10 +95,17 @@ def _signal_file_uploaded(mediafile, mimetype, url):
     app.rabbit.send(message, routing_key="dams.file_uploaded")
 
 
+def __get_mimetype_from_filename(filename):
+    mime = mimetypes.guess_type(filename, False)[0]
+    return mime if mime else "application/octet-stream"
+
+
 def _get_file_mimetype(file):
     file.seek(0, 0)
     mime = magic.Magic(mime=True).from_buffer(file.read(2048))
     file.seek(0, 0)
+    if mime == "application/octet-stream":
+        mime = __get_mimetype_from_filename(file.filename)
     return mime
 
 
