@@ -204,7 +204,7 @@ def add_exif_data(mediafile, mimetype):
     if mimetype and "image" not in mimetype:
         return
     image = download_file(mediafile["filename"])
-    if not mimetype and "image" not in _get_file_mimetype(image):
+    if not mimetype and "image" not in _get_file_mimetype(io.BytesIO(image.read())):
         return
     image_bytes = image.read()
     exif = piexif.load(image_bytes)
