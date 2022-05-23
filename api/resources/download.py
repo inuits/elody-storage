@@ -23,10 +23,11 @@ class Download(Resource):
             return response
 
         def read_file():
-            data = first_bytes
-            while data:
-                yield data
-                data = output.read(1024)
+            with output as stream:
+                data = first_bytes
+                while data:
+                    yield data
+                    data = stream.read(1024)
 
         mime = magic.Magic(mime=True).from_buffer(first_bytes)
         return Response(read_file(), mimetype=mime)
