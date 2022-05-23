@@ -109,6 +109,28 @@ def _get_file_mimetype(file):
     return mime
 
 
+def __upload_to_s3(file, key):
+    mpu = s3.Bucket(bucket).meta.client.create_multipart_upload(Bucket=bucket, Key=key)
+    part_num = 1
+    parts = []
+    while chunk := file.read(5242880):
+        part = s3.Bucket(bucket).meta.client.upload_part(
+            Body=chunk,
+            Bucket=bucket,
+            Key=key,
+            PartNumber=part_num,
+            UploadId=mpu["UploadId"],
+        )
+        parts.append({"PartNumber": part_num, "ETag": part["ETag"]})
+        part_num = part_num + 1
+    s3.Bucket(bucket).meta.client.complete_multipart_upload(
+        Bucket=bucket,
+        Key=key,
+        MultipartUpload={"Parts": parts},
+        UploadId=mpu["UploadId"],
+    )
+
+
 def upload_file(file, mediafile_id, key=None):
     mediafile = _get_mediafile(mediafile_id)
     if key is None:
@@ -142,8 +164,8 @@ def upload_file(file, mediafile_id, key=None):
             )
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
+    __upload_to_s3(file, key)
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id, mimetype)
-    s3.Bucket(bucket).put_object(Key=key, Body=file)
     _signal_file_uploaded(
         mediafile, mimetype, f'{storage_api_url}{mediafile["original_file_location"]}'
     )
@@ -155,7 +177,7 @@ def upload_transcode(file, mediafile_id):
     new_filename = f'{os.path.splitext(mediafile["original_filename"])[0]}.jpg'
     key = f"{md5sum}-transcode-{new_filename}"
     check_file_exists(key, md5sum)
-    s3.Bucket(bucket).put_object(Key=key, Body=file)
+    __upload_to_s3(file, key)
     mediafile["identifiers"].append(md5sum)
     data = {
         "identifiers": mediafile["identifiers"],
