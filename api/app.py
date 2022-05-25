@@ -66,25 +66,27 @@ app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 @rabbit.queue("dams.file_uploaded")
 def handle_file_uploaded(routing_key, body, message_id):
-    data = body["data"]
-    if "mediafile" not in data or "mimetype" not in data or "url" not in data:
+    mediafile = body["data"]["mediafile"]
+    if (
+        "mimetype" not in mediafile
+        or "metadata" not in mediafile
+        or not len(mediafile["metadata"])
+    ):
         return
-    if "metadata" not in data["mediafile"] or not len(data["mediafile"]["metadata"]):
-        return
-    storage.add_exif_data(data["mediafile"], data["mimetype"])
+    storage.add_exif_data(mediafile)
 
 
 @rabbit.queue("dams.mediafile_changed")
 def handle_mediafile_updated(routing_key, body, message_id):
-    data = body["data"]
-    if "old_mediafile" not in data or "mediafile" not in data:
+    old_mediafile = body["data"]["old_mediafile"]
+    mediafile = body["data"]["mediafile"]
+    if "mimetype" not in mediafile or "metadata" not in mediafile:
         return
-    if "metadata" not in data["mediafile"] or not storage.is_metadata_updated(
-        data["old_mediafile"]["metadata"], data["mediafile"]["metadata"]
+    if "metadata" in old_mediafile and not storage.is_metadata_updated(
+        old_mediafile["metadata"], mediafile["metadata"]
     ):
         return
-    mimetype = data["mediafile"]["mimetype"] if "mimetype" in data["mediafile"] else ""
-    storage.add_exif_data(data["mediafile"], mimetype)
+    storage.add_exif_data(mediafile)
 
 
 @rabbit.queue("dams.mediafile_deleted")

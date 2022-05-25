@@ -6,11 +6,11 @@ import json
 import magic
 import mimetypes
 import os
-import piexif
 import requests
 
 from botocore.exceptions import ClientError
 from cloudevents.http import CloudEvent, to_json
+from PIL import Image
 
 s3 = boto3.resource(
     "s3",
@@ -222,21 +222,19 @@ def _get_exif_strings(metadata):
     return {"artist": artist, "copyright": rights}
 
 
-def add_exif_data(mediafile, mimetype):
-    if mimetype and "image" not in mimetype:
+def add_exif_data(mediafile):
+    if "image" not in mediafile["mimetype"]:
         return
     image = download_file(mediafile["filename"])
-    if not mimetype and "image" not in _get_file_mimetype(io.BytesIO(image.read())):
-        return
-    image_bytes = image.read()
-    exif = piexif.load(image_bytes)
     exif_strings = _get_exif_strings(mediafile["metadata"])
-    exif["0th"][piexif.ImageIFD.Artist] = exif_strings["artist"].encode("UTF-8")
-    exif["0th"][piexif.ImageIFD.Copyright] = exif_strings["copyright"].encode("UTF-8")
-    exif_bytes = piexif.dump(exif)
-    ret_image = io.BytesIO()
-    piexif.insert(exif_bytes, image_bytes, ret_image)
-    s3.Bucket(bucket).put_object(Key=mediafile["filename"], Body=ret_image.read())
+    img = Image.open(image)
+    exif = img.getexif()
+    exif[0x013B] = exif_strings["artist"]
+    exif[0x8298] = exif_strings["copyright"]
+    buf = io.BytesIO()
+    img.save(buf, img.format, exif=exif)
+    buf.seek(0)
+    __upload_to_s3(buf, mediafile["filename"])
 
 
 def delete_file(mediafile):
