@@ -229,6 +229,7 @@ def add_exif_data(mediafile):
     exif_strings = _get_exif_strings(mediafile["metadata"])
     img = Image.open(image)
     exif = img.getexif()
+    img.load()
     exif[0x013B] = exif_strings["artist"]
     exif[0x8298] = exif_strings["copyright"]
     buf = io.BytesIO()
