@@ -10,6 +10,7 @@ import requests
 
 from botocore.exceptions import ClientError
 from cloudevents.http import CloudEvent, to_json
+from humanfriendly import parse_size
 from PIL import Image
 
 s3 = boto3.resource(
@@ -46,7 +47,7 @@ def check_file_exists(filename, md5sum):
 
 def calculate_md5(file):
     hash_obj = hashlib.md5()
-    while chunk := file.read(8192):
+    while chunk := file.read(parse_size("8 KiB")):
         hash_obj.update(chunk)
     file.seek(0, 0)
     return hash_obj.hexdigest()
@@ -102,7 +103,7 @@ def __get_mimetype_from_filename(filename):
 
 def _get_file_mimetype(file):
     file.seek(0, 0)
-    mime = magic.Magic(mime=True).from_buffer(file.read(8192))
+    mime = magic.Magic(mime=True).from_buffer(file.read(parse_size("8 KiB")))
     file.seek(0, 0)
     if mime == "application/octet-stream":
         mime = __get_mimetype_from_filename(file.filename)
@@ -113,7 +114,7 @@ def __upload_to_s3(file, key):
     mpu = s3.Bucket(bucket).meta.client.create_multipart_upload(Bucket=bucket, Key=key)
     part_num = 1
     parts = []
-    while chunk := file.read(5242880):
+    while chunk := file.read(parse_size("50 MiB")):
         part = s3.Bucket(bucket).meta.client.upload_part(
             Body=chunk,
             Bucket=bucket,

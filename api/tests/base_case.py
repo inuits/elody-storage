@@ -4,6 +4,7 @@ import os
 import unittest
 
 from app import app
+from humanfriendly import parse_size
 from io import BytesIO
 from PIL import Image
 
@@ -38,7 +39,7 @@ class BaseCase(unittest.TestCase):
 
     def calculate_md5(self, file):
         hash_obj = hashlib.md5()
-        while chunk := file.read(8192):
+        while chunk := file.read(parse_size("8 KiB")):
             hash_obj.update(chunk)
         file.seek(0, 0)
         return hash_obj.hexdigest()
