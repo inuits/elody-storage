@@ -3,8 +3,8 @@ FROM python:3.10-slim AS base-stage
 
 ENV FLASK_APP=app.py
 
-RUN apt-get update && apt-get install -y libmagic1
-RUN adduser --disabled-password --home /app --shell /bin/bash app
+RUN apt-get update && apt-get install -y libmagic1 && apt-get clean && \
+        adduser --disabled-password --home /app --shell /bin/bash app
 
 USER app
 WORKDIR /app
@@ -26,7 +26,7 @@ ENV APP_ENV=dev
 
 COPY docker/pip.conf /etc
 
-RUN pip install -r requirements.txt -r requirements_dev.txt
+RUN pip install -r requirements.txt -r requirements_dev.txt && pip cache purge
 
 EXPOSE 5000
 
@@ -36,7 +36,7 @@ FROM base-stage AS build-stage
 COPY docker/pip.conf /etc
 COPY api ./api
 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && pip cache purge
 
 ### Production stage
 FROM build-stage AS production-stage
