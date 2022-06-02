@@ -214,12 +214,12 @@ def _get_exif_strings(metadata):
     }
     for item in metadata:
         merged_metadata[item["key"]] = item["value"]
-    artist = merged_metadata.get("source")
+    artist = f'source: {merged_metadata.get("source")}'
     if photographer := merged_metadata.get("photographer"):
-        artist = f"{artist} - {photographer}"
-    rights = merged_metadata.get("rights")
+        artist = f"photographer: {photographer}, {artist}"
+    rights = f'license: {merged_metadata.get("rights")}'
     if copyrights := merged_metadata.get("copyright"):
-        rights = f"{rights} - {copyrights}"
+        rights = f"rightsholder: {copyrights}, {rights}"
     return {"artist": artist, "copyright": rights}
 
 
