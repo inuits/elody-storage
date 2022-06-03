@@ -204,35 +204,31 @@ def download_file(file_name):
     return file_obj["Body"]
 
 
-def _get_exif_strings(metadata):
-    merged_metadata = {
-        "copyright": "",
-        "photographer": "",
-        "rights": "",
-        "source": "",
-        "publication_status": "",
-    }
-    for item in metadata:
-        merged_metadata[item["key"]] = item["value"]
-    artist = f'source: {merged_metadata.get("source")}'
-    if photographer := merged_metadata.get("photographer"):
+def __get_item_metadata_value(item, key):
+    for entry in item["metadata"]:
+        if entry["key"] == key:
+            return entry["value"]
+    return False
+
+
+def __get_exif_for_mediafile(mediafile):
+    artist = f'source: {__get_item_metadata_value(mediafile, "source")}'
+    if photographer := __get_item_metadata_value(mediafile, "photographer"):
         artist = f"photographer: {photographer}, {artist}"
-    rights = f'license: {merged_metadata.get("rights")}'
-    if copyrights := merged_metadata.get("copyright"):
+    rights = f'license: {__get_item_metadata_value(mediafile, "rights")}'
+    if copyrights := __get_item_metadata_value(mediafile, "copyright"):
         rights = f"rightsholder: {copyrights}, {rights}"
-    return {"artist": artist, "copyright": rights}
+    return artist, rights
 
 
 def add_exif_data(mediafile):
     if "image" not in mediafile["mimetype"]:
         return
     image = download_file(mediafile["filename"])
-    exif_strings = _get_exif_strings(mediafile["metadata"])
     img = Image.open(image)
     exif = img.getexif()
     img.load()
-    exif[0x013B] = exif_strings["artist"]
-    exif[0x8298] = exif_strings["copyright"]
+    exif[0x013B], exif[0x8298] = __get_exif_for_mediafile(mediafile)
     buf = io.BytesIO()
     img.save(buf, img.format, exif=exif)
     buf.seek(0)
