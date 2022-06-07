@@ -73,7 +73,7 @@ def handle_file_uploaded(routing_key, body, message_id):
         or not len(mediafile["metadata"])
     ):
         return
-    storage.add_exif_data(mediafile)
+    # storage.add_exif_data(mediafile)
 
 
 @rabbit.queue("dams.mediafile_changed")
@@ -86,7 +86,7 @@ def handle_mediafile_updated(routing_key, body, message_id):
         old_mediafile["metadata"], mediafile["metadata"]
     ):
         return
-    storage.add_exif_data(mediafile)
+    # storage.add_exif_data(mediafile)
 
 
 @rabbit.queue("dams.mediafile_deleted")
