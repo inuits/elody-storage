@@ -11,12 +11,8 @@ class Download(Resource):
     @app.require_oauth("download-file")
     def get(self, key):
         output = download_file(key)
-        if output is None:
-            abort(
-                404,
-                message="File {} doesn't exist".format(key),
-            )
-        first_bytes = output.read(parse_size("8 KiB"))
+        if not output:
+            abort(404, message=f"File {key} doesn't exist")
 
         @after_this_request
         def add_header(response):
@@ -24,11 +20,9 @@ class Download(Resource):
             return response
 
         def read_file():
-            with output as stream:
-                data = first_bytes
-                while data:
-                    yield data
-                    data = stream.read(parse_size("1 KiB"))
+            while data := output.read(parse_size("1 MiB")):
+                yield data
 
-        mime = magic.Magic(mime=True).from_buffer(first_bytes)
+        mime = magic.Magic(mime=True).from_buffer(output.read(parse_size("8 KiB")))
+        output.seek(0)
         return Response(read_file(), mimetype=mime)

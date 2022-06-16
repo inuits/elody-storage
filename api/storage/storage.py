@@ -110,28 +110,6 @@ def _get_file_mimetype(file):
     return mime
 
 
-def __upload_to_s3(file, key):
-    mpu = s3.Bucket(bucket).meta.client.create_multipart_upload(Bucket=bucket, Key=key)
-    part_num = 1
-    parts = []
-    while chunk := file.read(parse_size("50 MiB")):
-        part = s3.Bucket(bucket).meta.client.upload_part(
-            Body=chunk,
-            Bucket=bucket,
-            Key=key,
-            PartNumber=part_num,
-            UploadId=mpu["UploadId"],
-        )
-        parts.append({"PartNumber": part_num, "ETag": part["ETag"]})
-        part_num = part_num + 1
-    s3.Bucket(bucket).meta.client.complete_multipart_upload(
-        Bucket=bucket,
-        Key=key,
-        MultipartUpload={"Parts": parts},
-        UploadId=mpu["UploadId"],
-    )
-
-
 def upload_file(file, mediafile_id, key=None):
     mediafile = _get_mediafile(mediafile_id)
     if key is None:
@@ -165,7 +143,7 @@ def upload_file(file, mediafile_id, key=None):
             )
         raise DuplicateFileException(error_message)
     key = f"{md5sum}-{key}"
-    __upload_to_s3(file, key)
+    s3.Bucket(bucket).upload_fileobj(Fileobj=file, Key=key)
     _update_mediafile_information(mediafile, md5sum, key, mediafile_id, mimetype)
     _signal_file_uploaded(
         mediafile, mimetype, f'{storage_api_url}{mediafile["original_file_location"]}'
@@ -178,7 +156,7 @@ def upload_transcode(file, mediafile_id):
     new_filename = f'{os.path.splitext(mediafile["original_filename"])[0]}.jpg'
     key = f"{md5sum}-transcode-{new_filename}"
     check_file_exists(key, md5sum)
-    __upload_to_s3(file, key)
+    s3.Bucket(bucket).upload_fileobj(Fileobj=file, Key=key)
     mediafile["identifiers"].append(md5sum)
     data = {
         "identifiers": mediafile["identifiers"],
@@ -195,13 +173,12 @@ def upload_transcode(file, mediafile_id):
 
 def download_file(file_name):
     try:
-        file_obj = s3.Bucket(bucket).meta.client.get_object(
-            Bucket=bucket, Key=file_name
-        )
+        file_obj = io.BytesIO()
+        s3.Bucket(bucket).download_fileobj(Key=file_name, Fileobj=file_obj)
     except ClientError:
         app.logger.error(f"File {file_name} not found")
         return None
-    return file_obj["Body"]
+    return file_obj
 
 
 def __get_item_metadata_value(item, key):
@@ -232,17 +209,14 @@ def add_exif_data(mediafile):
     buf = io.BytesIO()
     img.save(buf, img.format, exif=exif)
     buf.seek(0)
-    __upload_to_s3(buf, mediafile["filename"])
+    s3.Bucket(bucket).upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
 
 
 def delete_file(mediafile):
+    payload = {"Objects": [{"Key": mediafile["filename"]}], "Quiet": True}
+    if "transcode_filename" in mediafile:
+        payload["Objects"].append({"Key": mediafile["transcode_filename"]})
     try:
-        s3.Bucket(bucket).meta.client.delete_object(
-            Bucket=bucket, Key=mediafile["filename"]
-        )
-        if "transcode_filename" in mediafile:
-            s3.Bucket(bucket).meta.client.delete_object(
-                Bucket=bucket, Key=mediafile["transcode_filename"]
-            )
+        s3.Bucket(bucket).delete_objects(Delete=payload)
     except ClientError as ce:
         app.logger.error(f"Failed to delete file(s) {ce}")
