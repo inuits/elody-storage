@@ -17,7 +17,6 @@ gunicorn==20.1.0
 humanfriendly==10.0
 idna==3.3
 inuits-jwt-auth==0.0.26
-inuits-otel-tracer==0.0.8
 itsdangerous==2.1.2
 Jinja2==3.1.2
 jmespath==1.0.0
@@ -39,3 +38,25 @@ s3transfer==0.6.0
 six==1.16.0
 urllib3==1.26.9
 Werkzeug==2.1.2
+
+# Tracing dependencies
+backoff==1.10.0
+Deprecated==1.2.13
+googleapis-common-protos==1.56.3
+grpcio==1.46.3
+inuits-otel-tracer==0.0.8
+opentelemetry-api==1.9.1
+opentelemetry-exporter-otlp==1.9.1
+opentelemetry-exporter-otlp-proto-grpc==1.9.1
+opentelemetry-exporter-otlp-proto-http==1.9.1
+opentelemetry-instrumentation==0.28b1
+opentelemetry-instrumentation-flask==0.28b1
+opentelemetry-instrumentation-requests==0.28b1
+opentelemetry-instrumentation-wsgi==0.28b1
+opentelemetry-proto==1.9.1
+opentelemetry-sdk==1.9.1
+opentelemetry-semantic-conventions==0.28b1
+opentelemetry-util-http==0.28b1
+protobuf==3.20.1
+typing_extensions==4.2.0
+wrapt==1.14.1
