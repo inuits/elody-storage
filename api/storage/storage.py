@@ -153,8 +153,7 @@ def upload_file(file, mediafile_id, key=None):
 def upload_transcode(file, mediafile_id):
     mediafile = _get_mediafile(mediafile_id)
     md5sum = calculate_md5(file)
-    new_filename = f'{os.path.splitext(mediafile["original_filename"])[0]}.jpg'
-    key = f"{md5sum}-transcode-{new_filename}"
+    key = f"{md5sum}-transcode-{file.filename}"
     check_file_exists(key, md5sum)
     s3.Bucket(bucket).upload_fileobj(Fileobj=file, Key=key)
     mediafile["identifiers"].append(md5sum)
