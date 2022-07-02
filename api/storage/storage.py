@@ -203,7 +203,6 @@ def add_exif_data(mediafile):
     image = download_file(mediafile["filename"])
     img = Image.open(image)
     exif = img.getexif()
-    img.load()
     exif[0x013B], exif[0x8298] = __get_exif_for_mediafile(mediafile)
     buf = io.BytesIO()
     img.save(buf, img.format, exif=exif)
