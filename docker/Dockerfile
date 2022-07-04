@@ -1,10 +1,9 @@
 ### Base stage
-FROM python:3.10-slim AS base-stage
+FROM python:3.10-alpine AS base-stage
 
 ENV FLASK_APP=app.py
 
-RUN apt-get update && apt-get install -y libmagic1 && apt-get clean && \
-        adduser --disabled-password --home /app --shell /bin/bash app
+RUN apk add --no-cache libmagic && adduser --disabled-password --home /app --shell /bin/bash app
 
 USER app
 WORKDIR /app
