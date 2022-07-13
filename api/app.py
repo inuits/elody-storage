@@ -123,6 +123,12 @@ from resources.download import Download
 from resources.upload import Upload, UploadKey, UploadTranscode
 from resources.spec import AsyncAPISpec, OpenAPISpec
 
+if os.getenv("ENABLE_DELETE"):
+    from resources.delete import Delete, DeleteMultiple
+
+    api.add_resource(Delete, "/delete/<string:key>")
+    api.add_resource(DeleteMultiple, "/delete")
+
 api.add_resource(Download, "/download/<string:key>")
 
 api.add_resource(Upload, "/upload")
