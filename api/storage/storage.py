@@ -210,11 +210,8 @@ def add_exif_data(mediafile):
     s3.Bucket(bucket).upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
 
 
-def delete_file(mediafile):
-    payload = {"Objects": [{"Key": mediafile["filename"]}], "Quiet": True}
-    if "transcode_filename" in mediafile:
-        payload["Objects"].append({"Key": mediafile["transcode_filename"]})
-    try:
-        s3.Bucket(bucket).delete_objects(Delete=payload)
-    except ClientError as ce:
-        app.logger.error(f"Failed to delete file(s) {ce}")
+def delete_files(files):
+    payload = {"Objects": [], "Quiet": True}
+    for file in files:
+        payload["Objects"].append({"Key": file})
+    s3.Bucket(bucket).delete_objects(Delete=payload)

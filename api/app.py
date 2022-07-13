@@ -94,7 +94,13 @@ def handle_mediafile_deleted(routing_key, body, message_id):
     data = body["data"]
     if "mediafile" not in data or "linked_entities" not in data:
         return
-    storage.delete_file(data["mediafile"])
+    files = [data["mediafile"]["filename"]]
+    if "transcode_filename" in data["mediafile"]:
+        files.append(data["mediafile"]["transcode_filename"])
+    try:
+        storage.delete_files(files)
+    except Exception as ex:
+        logger.error(f"Deleting {files} failed with: {ex}")
 
 
 require_oauth = MyResourceProtector(
