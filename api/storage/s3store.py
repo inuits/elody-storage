@@ -10,16 +10,9 @@ import requests
 
 from botocore.exceptions import ClientError
 from cloudevents.http import CloudEvent, to_json
+from exceptions import DuplicateFileException
 from humanfriendly import parse_size
 from PIL import Image
-
-
-class DuplicateFileException(Exception):
-    def __init__(self, error_message, existing_file=None, md5sum=None):
-        super().__init__(error_message)
-        self.error_message = error_message
-        self.existing_file = existing_file
-        self.md5sum = md5sum
 
 
 class S3StorageManager:
@@ -121,26 +114,28 @@ class S3StorageManager:
                 found_mediafile = self._get_mediafile(ex.md5sum)
             except Exception:
                 self._update_mediafile_information(
-                    mediafile, ex.md5sum, ex.existing_file, mediafile_id, mimetype
+                    mediafile, ex.md5sum, ex.filename, mediafile_id, mimetype
                 )
-                error_message = f"{ex.error_message} No existing mediafile for file found, not deleting new one."
-                raise DuplicateFileException(error_message)
+                message = f"{ex.message} No existing mediafile for file found, not deleting new one."
+                raise DuplicateFileException(message)
             requests.delete(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 headers=self.headers,
             )
-            error_message = f"{ex.error_message} Existing mediafile for file found, deleting new one."
+            message = (
+                f"{ex.message} Existing mediafile for file found, deleting new one."
+            )
             if self.is_metadata_updated(
                 found_mediafile["metadata"], mediafile["metadata"]
             ):
-                error_message = f"{error_message} Metadata not up-to-date, updating."
+                message = f"{message} Metadata not up-to-date, updating."
                 payload = {"metadata": mediafile["metadata"]}
                 requests.patch(
                     f"{self.collection_api_url}/mediafiles/{ex.md5sum}",
                     headers=self.headers,
                     json=payload,
                 )
-            raise DuplicateFileException(error_message)
+            raise DuplicateFileException(message)
         key = f"{md5sum}-{key}"
         self.bucket.upload_fileobj(Fileobj=file, Key=key)
         self._update_mediafile_information(
