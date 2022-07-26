@@ -10,7 +10,7 @@ class Upload(BaseResource):
     def post(self, key=None):
         try:
             file = request.files["file"]
-            mediafile_id = self.__get_mediafile_id(request)
+            mediafile_id = self._get_mediafile_id(request)
             self.storage.upload_file(file, mediafile_id, key)
         except DuplicateFileException as ex:
             return str(ex), 409
@@ -30,7 +30,7 @@ class UploadTranscode(BaseResource):
     def post(self):
         try:
             file = request.files["file"]
-            mediafile_id = self.__get_mediafile_id(request)
+            mediafile_id = self._get_mediafile_id(request)
             self.storage.upload_transcode(file, mediafile_id)
         except Exception as ex:
             return str(ex), 400
