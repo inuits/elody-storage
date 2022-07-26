@@ -30,17 +30,15 @@ class S3StorageManager:
             aws_access_key_id=os.getenv("MINIO_ACCESS_KEY"),
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY"),
         )
-        self.bucket = os.getenv("MINIO_BUCKET")
+        self.bucket_name = os.getenv("MINIO_BUCKET")
+        self.bucket = self.s3.Bucket(self.bucket_name)
+        self.client = self.bucket.meta.client
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.storage_api_url = os.getenv("STORAGE_API_URL")
-        self.headers = {
-            "Authorization": "Bearer {}".format(os.getenv("STATIC_JWT", "None"))
-        }
+        self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT", "None")}'}
 
     def check_file_exists(self, filename, md5sum):
-        objects = self.s3.Bucket(self.bucket).meta.client.list_objects_v2(
-            Bucket=self.bucket, Prefix=md5sum
-        )
+        objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
         if len(objects.get("Contents", [])):
             existing_file = objects.get("Contents", [])[0]["Key"]
             error_message = (
@@ -144,7 +142,7 @@ class S3StorageManager:
                 )
             raise DuplicateFileException(error_message)
         key = f"{md5sum}-{key}"
-        self.s3.Bucket(self.bucket).upload_fileobj(Fileobj=file, Key=key)
+        self.bucket.upload_fileobj(Fileobj=file, Key=key)
         self._update_mediafile_information(
             mediafile, md5sum, key, mediafile_id, mimetype
         )
@@ -159,7 +157,7 @@ class S3StorageManager:
         md5sum = self.calculate_md5(file)
         key = f"{md5sum}-transcode-{file.filename}"
         self.check_file_exists(key, md5sum)
-        self.s3.Bucket(self.bucket).upload_fileobj(Fileobj=file, Key=key)
+        self.bucket.upload_fileobj(Fileobj=file, Key=key)
         mediafile["identifiers"].append(md5sum)
         data = {
             "identifiers": mediafile["identifiers"],
@@ -176,9 +174,7 @@ class S3StorageManager:
     def download_file(self, file_name):
         try:
             file_obj = io.BytesIO()
-            self.s3.Bucket(self.bucket).download_fileobj(
-                Key=file_name, Fileobj=file_obj
-            )
+            self.bucket.download_fileobj(Key=file_name, Fileobj=file_obj)
         except ClientError:
             app.logger.error(f"File {file_name} not found")
             return None
@@ -209,10 +205,8 @@ class S3StorageManager:
         buf = io.BytesIO()
         img.save(buf, img.format, exif=exif)
         buf.seek(0)
-        self.s3.Bucket(self.bucket).upload_fileobj(
-            Fileobj=buf, Key=mediafile["filename"]
-        )
+        self.bucket.upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
 
     def delete_files(self, files):
         payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
-        self.s3.Bucket(self.bucket).delete_objects(Delete=payload)
+        self.bucket.delete_objects(Delete=payload)
