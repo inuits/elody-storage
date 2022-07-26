@@ -1,5 +1,6 @@
 import app
 
+from exceptions import DuplicateFileException
 from flask import request
 from resources.base_resource import BaseResource
 
@@ -11,6 +12,8 @@ class Upload(BaseResource):
             file = request.files["file"]
             mediafile_id = self.__get_mediafile_id(request)
             self.storage.upload_file(file, mediafile_id, key)
+        except DuplicateFileException as ex:
+            return str(ex), 409
         except Exception as ex:
             return str(ex), 400
         return "", 201
