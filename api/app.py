@@ -9,7 +9,7 @@ from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from inuits_otel_tracer.tracer import Tracer
 from rabbitmq_pika_flask import RabbitMQ
-from storage import storage
+from storage.storagemanager import StorageManager
 
 traceObject = Tracer(
     os.getenv("OTEL_ENABLED", False) in ["True" or "true" or True],
@@ -82,8 +82,11 @@ def handle_mediafile_updated(routing_key, body, message_id):
     mediafile = body["data"]["mediafile"]
     if "mimetype" not in mediafile or "metadata" not in mediafile:
         return
-    if "metadata" in old_mediafile and not storage.is_metadata_updated(
-        old_mediafile["metadata"], mediafile["metadata"]
+    if (
+        "metadata" in old_mediafile
+        and not StorageManager()
+        .get_storage_engine()
+        .is_metadata_updated(old_mediafile["metadata"], mediafile["metadata"])
     ):
         return
     # storage.add_exif_data(mediafile)
@@ -98,7 +101,7 @@ def handle_mediafile_deleted(routing_key, body, message_id):
     if "transcode_filename" in data["mediafile"]:
         files.append(data["mediafile"]["transcode_filename"])
     try:
-        storage.delete_files(files)
+        StorageManager().get_storage_engine().delete_files(files)
     except Exception as ex:
         logger.error(f"Deleting {files} failed with: {ex}")
 

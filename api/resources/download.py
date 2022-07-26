@@ -2,15 +2,15 @@ import app
 import magic
 
 from flask import after_this_request, Response
-from flask_restful import Resource, abort
+from flask_restful import abort
 from humanfriendly import parse_size
-from storage.storage import download_file
+from resources.base_resource import BaseResource
 
 
-class Download(Resource):
+class Download(BaseResource):
     @app.require_oauth("download-file")
     def get(self, key):
-        output = download_file(key)
+        output = self.storage.download_file(key)
         if not output:
             abort(404, message=f"File {key} doesn't exist")
 

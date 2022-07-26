@@ -1,12 +1,12 @@
 from flask import send_from_directory
-from flask_restful import Resource
+from resources.base_resource import BaseResource
 
 
-class OpenAPISpec(Resource):
+class OpenAPISpec(BaseResource):
     def get(self):
         return send_from_directory("docs", "dams-storage-api.json")
 
 
-class AsyncAPISpec(Resource):
+class AsyncAPISpec(BaseResource):
     def get(self):
         return send_from_directory("docs", "dams-storage-api-events.html")

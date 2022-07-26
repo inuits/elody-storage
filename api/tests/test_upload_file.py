@@ -5,9 +5,11 @@ from unittest.mock import patch, MagicMock
 
 
 @patch("app.rabbit", new=MagicMock())
-@patch("storage.storage._update_mediafile_information", new=MagicMock())
-@patch("storage.storage._get_mediafile", new=MagicMock())
-@patch("storage.storage._signal_file_uploaded", new=MagicMock())
+@patch("storage.s3store.S3StorageManager._get_mediafile", new=MagicMock())
+@patch(
+    "storage.s3store.S3StorageManager._update_mediafile_information", new=MagicMock()
+)
+@patch("storage.s3store.S3StorageManager._signal_file_uploaded", new=MagicMock())
 class UploadFileTest(BaseCase):
     def test_upload_invalid_file(self):
         data = dict()
