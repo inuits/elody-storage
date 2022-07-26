@@ -10,7 +10,7 @@ import requests
 
 from botocore.exceptions import ClientError
 from cloudevents.http import CloudEvent, to_json
-from exceptions import DuplicateFileException
+from exceptions import DuplicateFileException, MediafileNotFoundException
 from humanfriendly import parse_size
 from PIL import Image
 
@@ -67,8 +67,10 @@ class S3StorageManager:
         req = requests.get(
             f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
         )
-        if req.status_code != 200:
-            raise Exception("Could not get mediafile with provided id")
+        if req.status_code == 404:
+            raise MediafileNotFoundException("Could not get mediafile with provided id")
+        elif req.status_code != 200:
+            raise Exception("Something went wrong while getting mediafile")
         return req.json()
 
     def is_metadata_updated(self, old_metadata, new_metadata):
@@ -112,7 +114,7 @@ class S3StorageManager:
         except DuplicateFileException as ex:
             try:
                 found_mediafile = self._get_mediafile(ex.md5sum)
-            except Exception:
+            except MediafileNotFoundException:
                 self._update_mediafile_information(
                     mediafile, ex.md5sum, ex.filename, mediafile_id, mimetype
                 )
