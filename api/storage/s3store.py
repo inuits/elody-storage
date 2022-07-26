@@ -103,6 +103,34 @@ class S3StorageManager:
             mime = self.__get_mimetype_from_filename(file.filename)
         return mime
 
+    def __handle_duplicate_file(
+        self, mediafile_id, mediafile, mimetype, md5sum, filename, message
+    ):
+        try:
+            found_mediafile = self._get_mediafile(md5sum)
+        except MediafileNotFoundException:
+            self._update_mediafile_information(
+                mediafile, md5sum, filename, mediafile_id, mimetype
+            )
+            message = (
+                f"{message} No existing mediafile for file found, not deleting new one."
+            )
+            raise DuplicateFileException(message)
+        requests.delete(
+            f"{self.collection_api_url}/mediafiles/{mediafile_id}",
+            headers=self.headers,
+        )
+        message = f"{message} Existing mediafile for file found, deleting new one."
+        if self.is_metadata_updated(found_mediafile["metadata"], mediafile["metadata"]):
+            message = f"{message} Metadata not up-to-date, updating."
+            payload = {"metadata": mediafile["metadata"]}
+            requests.patch(
+                f"{self.collection_api_url}/mediafiles/{md5sum}",
+                headers=self.headers,
+                json=payload,
+            )
+        raise DuplicateFileException(message)
+
     def upload_file(self, file, mediafile_id, key=None):
         mediafile = self._get_mediafile(mediafile_id)
         if key is None:
@@ -112,32 +140,9 @@ class S3StorageManager:
         try:
             self.__check_file_exists(file.filename, md5sum)
         except DuplicateFileException as ex:
-            try:
-                found_mediafile = self._get_mediafile(ex.md5sum)
-            except MediafileNotFoundException:
-                self._update_mediafile_information(
-                    mediafile, ex.md5sum, ex.filename, mediafile_id, mimetype
-                )
-                message = f"{ex.message} No existing mediafile for file found, not deleting new one."
-                raise DuplicateFileException(message)
-            requests.delete(
-                f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-                headers=self.headers,
+            self.__handle_duplicate_file(
+                mediafile_id, mediafile, mimetype, ex.md5sum, ex.filename, ex.message
             )
-            message = (
-                f"{ex.message} Existing mediafile for file found, deleting new one."
-            )
-            if self.is_metadata_updated(
-                found_mediafile["metadata"], mediafile["metadata"]
-            ):
-                message = f"{message} Metadata not up-to-date, updating."
-                payload = {"metadata": mediafile["metadata"]}
-                requests.patch(
-                    f"{self.collection_api_url}/mediafiles/{ex.md5sum}",
-                    headers=self.headers,
-                    json=payload,
-                )
-            raise DuplicateFileException(message)
         key = f"{md5sum}-{key}"
         self.bucket.upload_fileobj(Fileobj=file, Key=key)
         self._update_mediafile_information(
