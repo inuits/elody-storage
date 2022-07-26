@@ -37,7 +37,7 @@ class S3StorageManager:
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT", "None")}'}
 
-    def check_file_exists(self, filename, md5sum):
+    def __check_file_exists(self, filename, md5sum):
         objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
         if len(objects.get("Contents", [])):
             existing_file = objects.get("Contents", [])[0]["Key"]
@@ -46,7 +46,7 @@ class S3StorageManager:
             )
             raise DuplicateFileException(error_message, existing_file, md5sum)
 
-    def calculate_md5(self, file):
+    def __calculate_md5(self, file):
         hash_obj = hashlib.md5()
         while chunk := file.read(parse_size("8 KiB")):
             hash_obj.update(chunk)
@@ -100,7 +100,7 @@ class S3StorageManager:
         mime = mimetypes.guess_type(filename, False)[0]
         return mime if mime else "application/octet-stream"
 
-    def _get_file_mimetype(self, file):
+    def __get_file_mimetype(self, file):
         file.seek(0, 0)
         mime = magic.Magic(mime=True).from_buffer(file.read(parse_size("8 KiB")))
         file.seek(0, 0)
@@ -112,10 +112,10 @@ class S3StorageManager:
         mediafile = self._get_mediafile(mediafile_id)
         if key is None:
             key = file.filename
-        md5sum = self.calculate_md5(file)
-        mimetype = self._get_file_mimetype(file)
+        md5sum = self.__calculate_md5(file)
+        mimetype = self.__get_file_mimetype(file)
         try:
-            self.check_file_exists(file.filename, md5sum)
+            self.__check_file_exists(file.filename, md5sum)
         except DuplicateFileException as ex:
             try:
                 found_mediafile = self._get_mediafile(ex.md5sum)
@@ -154,9 +154,9 @@ class S3StorageManager:
 
     def upload_transcode(self, file, mediafile_id):
         mediafile = self._get_mediafile(mediafile_id)
-        md5sum = self.calculate_md5(file)
+        md5sum = self.__calculate_md5(file)
         key = f"{md5sum}-transcode-{file.filename}"
-        self.check_file_exists(key, md5sum)
+        self.__check_file_exists(key, md5sum)
         self.bucket.upload_fileobj(Fileobj=file, Key=key)
         mediafile["identifiers"].append(md5sum)
         data = {
