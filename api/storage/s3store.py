@@ -214,7 +214,5 @@ class S3StorageManager:
         )
 
     def delete_files(self, files):
-        payload = {"Objects": [], "Quiet": True}
-        for file in files:
-            payload["Objects"].append({"Key": file})
+        payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
         self.s3.Bucket(self.bucket).delete_objects(Delete=payload)
