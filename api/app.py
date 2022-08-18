@@ -9,7 +9,6 @@ from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from inuits_otel_tracer.tracer import Tracer
 from rabbitmq_pika_flask import RabbitMQ
-from storage.storagemanager import StorageManager
 
 traceObject = Tracer(
     os.getenv("OTEL_ENABLED", False) in ["True" or "true" or True],
@@ -63,49 +62,6 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
     health.add_check(rabbit_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
-
-@rabbit.queue("dams.file_uploaded")
-def handle_file_uploaded(routing_key, body, message_id):
-    mediafile = body["data"]["mediafile"]
-    if (
-        "mimetype" not in mediafile
-        or "metadata" not in mediafile
-        or not len(mediafile["metadata"])
-    ):
-        return
-    # storage.add_exif_data(mediafile)
-
-
-@rabbit.queue("dams.mediafile_changed")
-def handle_mediafile_updated(routing_key, body, message_id):
-    old_mediafile = body["data"]["old_mediafile"]
-    mediafile = body["data"]["mediafile"]
-    if "mimetype" not in mediafile or "metadata" not in mediafile:
-        return
-    if (
-        "metadata" in old_mediafile
-        and not StorageManager()
-        .get_storage_engine()
-        .is_metadata_updated(old_mediafile["metadata"], mediafile["metadata"])
-    ):
-        return
-    # storage.add_exif_data(mediafile)
-
-
-@rabbit.queue("dams.mediafile_deleted")
-def handle_mediafile_deleted(routing_key, body, message_id):
-    data = body["data"]
-    if "mediafile" not in data or "linked_entities" not in data:
-        return
-    files = [data["mediafile"]["filename"]]
-    if "transcode_filename" in data["mediafile"]:
-        files.append(data["mediafile"]["transcode_filename"])
-    try:
-        StorageManager().get_storage_engine().delete_files(files)
-    except Exception as ex:
-        logger.error(f"Deleting {files} failed with: {ex}")
-
-
 require_oauth = MyResourceProtector(
     logger,
     os.getenv("REQUIRE_TOKEN", True) == ("True" or "true" or True),
@@ -126,6 +82,7 @@ app.register_blueprint(swaggerui_blueprint)
 from resources.download import Download
 from resources.upload import Upload, UploadKey, UploadTranscode
 from resources.spec import AsyncAPISpec, OpenAPISpec
+import resources.queues
 
 if os.getenv("ENABLE_DELETE"):
     from resources.delete import Delete, DeleteMultiple
