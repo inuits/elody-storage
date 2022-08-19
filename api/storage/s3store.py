@@ -9,7 +9,8 @@ import os
 import requests
 
 from botocore.exceptions import ClientError
-from cloudevents.http import CloudEvent, to_json
+from cloudevents.conversion import to_json
+from cloudevents.http import CloudEvent
 from exceptions import DuplicateFileException, MediafileNotFoundException
 from humanfriendly import parse_size
 from PIL import Image
