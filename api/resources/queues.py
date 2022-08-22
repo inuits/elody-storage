@@ -43,3 +43,16 @@ def handle_mediafile_deleted(routing_key, body, message_id):
         StorageManager().get_storage_engine().delete_files(files)
     except Exception as ex:
         app.logger.error(f"Deleting {files} failed with: {ex}")
+
+
+@app.rabbit.queue("dams.virus_detected")
+def mediafile_deleted(routing_key, body, message_id):
+    data = body["data"]
+    if (
+        "filename" not in data
+        or "mediafile_id" not in data
+        or "scan_result" not in data
+    ):
+        app.logger.error("Message malformed: missing 'filename' or 'mediafile_id'")
+        return
+    StorageManager().get_storage_engine().delete_files([data["filename"]])
