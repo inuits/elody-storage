@@ -15,6 +15,19 @@ def handle_file_uploaded(routing_key, body, message_id):
     # storage.add_exif_data(mediafile)
 
 
+@app.rabbit.queue("dams.file_scanned")
+def remove_infected_file(routing_key, body, message_id):
+    data = body["data"]
+    if any(x not in data for x in ["mediafile_id", "clamav_version", "infected"]):
+        app.logger.error(
+            "Message malformed: missing 'mediafile_id', 'clamav_version' or 'infected'"
+        )
+        return
+    if not data["infected"]:
+        return
+    StorageManager().get_storage_engine().delete_files([data["filename"]])
+
+
 @app.rabbit.queue("dams.mediafile_changed")
 def handle_mediafile_updated(routing_key, body, message_id):
     old_mediafile = body["data"]["old_mediafile"]
@@ -43,16 +56,3 @@ def handle_mediafile_deleted(routing_key, body, message_id):
         StorageManager().get_storage_engine().delete_files(files)
     except Exception as ex:
         app.logger.error(f"Deleting {files} failed with: {ex}")
-
-
-@app.rabbit.queue("dams.virus_detected")
-def mediafile_deleted(routing_key, body, message_id):
-    data = body["data"]
-    if (
-        "filename" not in data
-        or "mediafile_id" not in data
-        or "scan_result" not in data
-    ):
-        app.logger.error("Message malformed: missing 'filename' or 'mediafile_id'")
-        return
-    StorageManager().get_storage_engine().delete_files([data["filename"]])
