@@ -2,14 +2,13 @@ import app
 import boto3
 import hashlib
 import io
-import json
 import magic
 import mimetypes
 import os
 import requests
 
 from botocore.exceptions import ClientError
-from cloudevents.conversion import to_json
+from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
 from exceptions import DuplicateFileException, MediafileNotFoundException
 from humanfriendly import parse_size
@@ -88,9 +87,8 @@ class S3StorageManager:
     def _signal_file_uploaded(self, mediafile, mimetype, url):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
         data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
-        event = CloudEvent(attributes, data)
-        message = json.loads(to_json(event))
-        app.rabbit.send(message, routing_key="dams.file_uploaded")
+        event = to_dict(CloudEvent(attributes, data))
+        app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __get_mimetype_from_filename(self, filename):
         mime = mimetypes.guess_type(filename, False)[0]
