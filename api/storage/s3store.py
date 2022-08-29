@@ -30,7 +30,7 @@ class S3StorageManager:
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT", "None")}'}
 
-    def __check_file_exists(self, filename, md5sum):
+    def check_file_exists(self, filename, md5sum):
         objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
         if len(objects.get("Contents", [])):
             existing_file = objects.get("Contents", [])[0]["Key"]
@@ -137,7 +137,7 @@ class S3StorageManager:
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file)
         try:
-            self.__check_file_exists(file.filename, md5sum)
+            self.check_file_exists(file.filename, md5sum)
         except DuplicateFileException as ex:
             self.__handle_duplicate_file(
                 mediafile_id, mediafile, mimetype, ex.md5sum, ex.filename, ex.message
@@ -157,7 +157,7 @@ class S3StorageManager:
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         key = f"{md5sum}-transcode-{file.filename}"
-        self.__check_file_exists(key, md5sum)
+        self.check_file_exists(key, md5sum)
         self.bucket.upload_fileobj(Fileobj=file, Key=key)
         mediafile["identifiers"].append(md5sum)
         data = {

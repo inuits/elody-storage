@@ -80,6 +80,7 @@ require_oauth.register_token_validator(validator)
 app.register_blueprint(swaggerui_blueprint)
 
 from resources.download import Download
+from resources.unique import Unique
 from resources.upload import Upload, UploadKey, UploadTranscode
 from resources.spec import AsyncAPISpec, OpenAPISpec
 import resources.queues
@@ -91,6 +92,8 @@ if os.getenv("ENABLE_DELETE"):
     api.add_resource(DeleteMultiple, "/delete")
 
 api.add_resource(Download, "/download/<string:key>")
+
+api.add_resource(Unique, "/unique/<string:md5sum>")
 
 api.add_resource(Upload, "/upload")
 api.add_resource(UploadKey, "/upload/<string:key>")
