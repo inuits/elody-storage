@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sentry_sdk
 
 from flask import Flask
 from flask_restful import Api
@@ -9,6 +10,7 @@ from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from inuits_otel_tracer.tracer import Tracer
 from rabbitmq_pika_flask import RabbitMQ
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 traceObject = Tracer(
     os.getenv("OTEL_ENABLED", False) in ["True" or "true" or True],
@@ -78,6 +80,9 @@ validator = JWTValidator(
 require_oauth.register_token_validator(validator)
 
 app.register_blueprint(swaggerui_blueprint)
+
+if os.getenv("SENTRY_ENABLED", False):
+    sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"), integrations=[FlaskIntegration()])
 
 from resources.download import Download
 from resources.unique import Unique
