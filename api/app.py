@@ -14,7 +14,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from storage.storagemanager import StorageManager
 
 traceObject = Tracer(
-    os.getenv("OTEL_ENABLED", False) in ["True" or "true" or True],
+    os.getenv("OTEL_ENABLED", False) in ["True", "true", True],
     "Storage api",
     __name__,
 )
@@ -58,7 +58,7 @@ rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 require_oauth = MyResourceProtector(
     logger,
-    os.getenv("REQUIRE_TOKEN", True) in ["True" or "true" or True],
+    os.getenv("REQUIRE_TOKEN", True) in ["True", "true", True],
 )
 validator = JWTValidator(
     logger,
