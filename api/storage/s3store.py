@@ -211,3 +211,6 @@ class S3StorageManager:
     def delete_files(self, files):
         payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
         self.bucket.delete_objects(Delete=payload)
+
+    def check_health(self):
+        return self.client.head_bucket(Bucket=self.bucket_name)
