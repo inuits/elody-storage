@@ -9,6 +9,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from inuits_otel_tracer.tracer import Tracer
+from job_helper.job_extension import JobExtension
 from rabbitmq_pika_flask import RabbitMQ
 from sentry_sdk.integrations.flask import FlaskIntegration
 from storage.storagemanager import StorageManager
@@ -55,6 +56,8 @@ traceObject.startAutoInstrumentation(app)
 
 rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
+
+jobs_extension = JobExtension(rabbit)
 
 require_oauth = MyResourceProtector(
     logger,
