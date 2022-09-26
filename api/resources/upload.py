@@ -1,11 +1,16 @@
 import app
 
-from exceptions import DuplicateFileException
+from exceptions import DuplicateFileException, MediafileNotFoundException
 from flask import request
 from resources.base_resource import BaseResource
 
 
 class Upload(BaseResource):
+    def __get_mediafile_id(self, req):
+        if mediafile_id := req.args.get("id"):
+            return mediafile_id
+        raise MediafileNotFoundException("No mediafile id provided")
+
     @app.require_oauth("upload-file")
     def post(self, key=None, transcode=False):
         job = app.jobs_extension.create_new_job(
@@ -15,7 +20,7 @@ class Upload(BaseResource):
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
         try:
             file = request.files["file"]
-            mediafile_id = self._get_mediafile_id(request)
+            mediafile_id = self.__get_mediafile_id(request)
             app.jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id)
