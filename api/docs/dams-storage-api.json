@@ -1,16 +1,15 @@
 {
-  "openapi": "3.0.1",
+  "openapi": "3.0.3",
   "info": {
     "title": "DAMS Storage API",
-    "description": "An API for interactings with the storage layer of DAMS",
     "contact": {
-      "email": "booster@inuits.eu"
+      "email": "developers@inuits.eu"
     },
-    "version": "0.0.1"
+    "version": "1.0.0"
   },
   "externalDocs": {
-    "description": "Find out more about DAMS",
-    "url": "https://docs.inuits.io/dams/storage-api"
+    "description": "DAMS Storage API Source",
+    "url": "https://gitlab.com/inuits/dams/dams-collection-api"
   },
   "servers": [
     {
@@ -19,122 +18,87 @@
   ],
   "tags": [
     {
+      "name": "delete",
+      "description": "Delete files"
+    },
+    {
       "name": "download",
-      "description": "Download mediafiles"
+      "description": "Download files"
+    },
+    {
+      "name": "unique",
+      "description": "Uniqueness file"
     },
     {
       "name": "upload",
-      "description": "Upload mediafiles"
+      "description": "Upload files"
     }
   ],
   "paths": {
-    "/upload": {
+    "/delete": {
       "post": {
         "tags": [
-          "upload"
+          "delete"
         ],
-        "summary": "Upload a new mediafile",
-        "operationId": "uploadMediafile",
+        "summary": "Delete files with key",
+        "operationId": "deleteFiles",
         "requestBody": {
-          "description": "Mediafile that needs to be uploaded",
+          "description": "Keys of files to be deleted",
           "required": true,
           "content": {
-            "image/*": {
+            "application/json": {
               "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "audio/*": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "video/*": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "application/pdf": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "ok"
+          "204": {
+            "description": "Successful operation"
           },
-          "400": {
-            "description": "Invalid request"
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "File not found"
           },
           "405": {
-            "description": "Invalid input"
+            "description": "Request body is invalid"
           }
         }
       }
     },
-    "/upload/{key}": {
+    "/delete/{key}": {
       "post": {
         "tags": [
-          "upload"
+          "delete"
         ],
-        "summary": "Upload a new mediafile with a specified key",
-        "operationId": "uploadMediafileUsingKey",
+        "summary": "Delete file with key",
+        "operationId": "deleteFile",
         "parameters": [
           {
             "name": "key",
             "in": "path",
-            "description": "The file identifier",
+            "description": "Key of file to be deleted",
             "required": true,
             "schema": {
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "description": "Mediafile that needs to be uploaded",
-          "required": true,
-          "content": {
-            "image/*": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "audio/*": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "video/*": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            },
-            "application/pdf": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            }
-          }
-        },
         "responses": {
-          "201": {
-            "description": "ok"
+          "204": {
+            "description": "successful operation"
           },
-          "400": {
-            "description": "Invalid request"
+          "401": {
+            "description": "Unauthorized"
           },
-          "405": {
-            "description": "Invalid input"
+          "404": {
+            "description": "file not found"
           }
         }
       }
@@ -144,13 +108,13 @@
         "tags": [
           "download"
         ],
-        "summary": "Download an existing mediafile",
-        "operationId": "downloadMediafile",
+        "summary": "Download file with key",
+        "operationId": "downloadFile",
         "parameters": [
           {
             "name": "key",
             "in": "path",
-            "description": "The file identifier",
+            "description": "Key of file to be downloaded",
             "required": true,
             "schema": {
               "type": "string"
@@ -159,9 +123,9 @@
         ],
         "responses": {
           "200": {
-            "description": "ok",
+            "description": "Successful operation",
             "content": {
-              "image/*": {
+              "application/pdf": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -173,13 +137,13 @@
                   "format": "binary"
                 }
               },
-              "video/*": {
+              "image/*": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
               },
-              "application/pdf": {
+              "video/*": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -187,8 +151,244 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized"
+          },
           "404": {
             "description": "Mediafile not found"
+          }
+        }
+      }
+    },
+    "/unique/{md5sum}": {
+      "post": {
+        "tags": [
+          "unique"
+        ],
+        "summary": "Uniqueness file",
+        "operationId": "uniqueFile",
+        "parameters": [
+          {
+            "name": "md5sum",
+            "in": "path",
+            "description": "md5sum of file to check",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "md5sum"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "409": {
+            "description": "Duplicate file detected"
+          }
+        }
+      }
+    },
+    "/upload": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Upload file",
+        "operationId": "uploadFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Id of mediafile that describes file",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "File content",
+          "required": true,
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Request is invalid"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Duplicate file detected"
+          }
+        }
+      }
+    },
+    "/upload/{key}": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Upload file with key",
+        "operationId": "uploadFileWithKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Id of mediafile that describes file",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "description": "Key to be used for file",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "File content",
+          "required": true,
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Request is invalid"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Duplicate file detected"
+          }
+        }
+      }
+    },
+    "/upload/transcode": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Upload transcode",
+        "operationId": "uploadTranscode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Id of mediafile to add transcode to",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "File content",
+          "required": true,
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/*": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Request is invalid"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Duplicate file detected"
           }
         }
       }
