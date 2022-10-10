@@ -1,7 +1,7 @@
 aniso8601==9.0.1
 Authlib==1.1.0
-boto3==1.24.84
-botocore==1.27.84
+boto3==1.24.89
+botocore==1.27.89
 certifi==2022.9.24
 cffi==1.15.1
 charset-normalizer==2.1.1
