@@ -1,5 +1,5 @@
 attrs==22.1.0
-black==22.8.0
+black==22.10.0
 coverage==6.5.0
 Flask-Cors==3.0.10
 iniconfig==1.1.1
@@ -9,6 +9,8 @@ pathspec==0.10.1
 platformdirs==2.5.2
 pluggy==1.0.0
 pytest==7.1.3
-responses==0.21.0
+responses==0.22.0
+toml==0.10.2
 tomli==2.0.1
+types-toml==0.10.8
 xmltodict==0.13.0
