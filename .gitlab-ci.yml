@@ -7,9 +7,9 @@ include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
     file: 'python-pipeline.yml'
     ref: 'v1.3.0'
-  - project: 'customers/coghent/infra/coghent-infra-gitlab-templates'
-    file    : 'dams-dev-deploy.yml'
-    ref     : 'master'
+  - project: 'inuits/gitlab-ci/pipeline-deploy-targets'
+    file: 'extra-targets.yml'
+    ref: 'main'
     
 variables:
   CUSTOMER: 'inuits'
