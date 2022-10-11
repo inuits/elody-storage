@@ -14,6 +14,4 @@ include:
 variables:
   CUSTOMER: 'inuits'
   APPLICATION: 'dams-storage'
-  TERRAFORM_IMAGE: 'dams-terraform'
-  TERRAFORM_TAG: 'latest'
   SKIP_DEPLOY: 'true'
