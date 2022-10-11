@@ -5,7 +5,7 @@
 
 include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
-    file: 'python-pipeline.yml'
+    file: 'pip-pipeline.yml'
     ref: 'v1.5.2'
   - project: 'inuits/gitlab-ci/pipeline-deploy-targets'
     file: 'extra-targets.yml'
