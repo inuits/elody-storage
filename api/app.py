@@ -24,7 +24,11 @@ traceObject.configTracer(
 )
 
 if os.getenv("SENTRY_ENABLED", False):
-    sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"), integrations=[FlaskIntegration()])
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        integrations=[FlaskIntegration()],
+        environment=os.getenv("NOMAD_NAMESPACE"),
+    )
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = (
