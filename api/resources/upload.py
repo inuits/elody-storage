@@ -27,10 +27,10 @@ class Upload(BaseResource):
             else:
                 self.storage.upload_file(file, mediafile_id, key)
         except DuplicateFileException as ex:
-            app.jobs_extension.fail_job(job, error_message=str(ex))
+            app.jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 409
         except Exception as ex:
-            app.jobs_extension.fail_job(job, error_message=str(ex))
+            app.jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 400
         app.jobs_extension.finish_job(job)
         return "", 201
