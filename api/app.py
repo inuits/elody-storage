@@ -8,20 +8,10 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
-from inuits_otel_tracer.tracer import Tracer
 from job_helper.job_extension import JobExtension
 from rabbitmq_pika_flask import RabbitMQ
 from sentry_sdk.integrations.flask import FlaskIntegration
 from storage.storagemanager import StorageManager
-
-traceObject = Tracer(
-    os.getenv("OTEL_ENABLED", False) in ["True", "true", True],
-    "Storage api",
-    __name__,
-)
-traceObject.configTracer(
-    endpoint=os.getenv("OTLP_EXPORTER_ENDPOINT", "otel-collector:4317"), isInsecure=True
-)
 
 if os.getenv("SENTRY_ENABLED", False):
     sentry_sdk.init(
@@ -55,8 +45,6 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
-
-traceObject.startAutoInstrumentation(app)
 
 rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
