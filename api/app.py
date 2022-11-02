@@ -107,12 +107,5 @@ api.add_resource(UploadTranscode, "/upload/transcode")
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
 
-
-@app.after_request
-def add_header(response):
-    response.headers["Jaeger-trace-id"] = os.getenv("JAEGER_TRACE_ID", "default-id")
-    return response
-
-
 if __name__ == "__main__":
     app.run(debug=True)
