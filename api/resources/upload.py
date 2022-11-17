@@ -32,7 +32,9 @@ class Upload(BaseResource):
         except Exception as ex:
             app.jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 400
-        app.jobs_extension.finish_job(job)
+        app.jobs_extension.finish_job(
+            job, message=f"Successfully uploaded {file.filename}"
+        )
         return "", 201
 
 
