@@ -1,7 +1,7 @@
 attrs==22.1.0
 black==22.10.0
 coverage==6.5.0
-exceptiongroup==1.0.3
+exceptiongroup==1.0.4
 Flask-Cors==3.0.10
 iniconfig==1.1.1
 moto==4.0.9
