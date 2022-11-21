@@ -2,6 +2,7 @@ import app
 
 from exceptions import DuplicateFileException, MediafileNotFoundException
 from flask import request
+from inuits_jwt_auth.authorization import current_token
 from resources.base_resource import BaseResource
 
 
@@ -16,6 +17,7 @@ class Upload(BaseResource):
         job = app.jobs_extension.create_new_job(
             f'Starting {"transcode" if transcode else "file"} upload',
             f'dams.upload_{"transcode" if transcode else "file"}',
+            user=dict(current_token).get("email", "default_uploader"),
         )
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
         try:
