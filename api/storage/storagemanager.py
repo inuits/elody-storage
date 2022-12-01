@@ -9,9 +9,9 @@ class StorageManager(metaclass=Singleton):
         self.storage_engine = os.getenv("STORAGE_ENGINE", "s3")
         self.__init_storage_managers()
 
-    def get_storage_engine(self):
-        return self.storage_manager
-
     def __init_storage_managers(self):
         if self.storage_engine == "s3":
             self.storage_manager = S3StorageManager()
+
+    def get_storage_engine(self):
+        return self.storage_manager

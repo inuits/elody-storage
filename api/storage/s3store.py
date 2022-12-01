@@ -28,16 +28,7 @@ class S3StorageManager:
         self.client = self.bucket.meta.client
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.storage_api_url = os.getenv("STORAGE_API_URL")
-        self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT", "None")}'}
-
-    def check_file_exists(self, filename, md5sum):
-        objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
-        if len(objects.get("Contents", [])):
-            existing_file = objects.get("Contents", [])[0]["Key"]
-            error_message = (
-                f"Duplicate file {filename} matches existing file {existing_file}."
-            )
-            raise DuplicateFileException(error_message, existing_file, md5sum)
+        self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
     def __calculate_md5(self, file):
         hash_obj = hashlib.md5()
@@ -46,53 +37,14 @@ class S3StorageManager:
         file.seek(0, 0)
         return hash_obj.hexdigest()
 
-    def _update_mediafile_information(
-        self, mediafile, md5sum, new_key, mediafile_id, mimetype
-    ):
-        mediafile["identifiers"].append(md5sum)
-        mediafile["original_filename"] = mediafile["filename"]
-        mediafile["filename"] = new_key
-        mediafile["original_file_location"] = f"/download/{new_key}"
-        mediafile[
-            "thumbnail_file_location"
-        ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
-        mediafile["mimetype"] = mimetype
-        requests.put(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-            json=mediafile,
-            headers=self.headers,
-        )
-
-    def _get_mediafile(self, mediafile_id):
-        req = requests.get(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
-        )
-        if req.status_code == 404:
-            raise MediafileNotFoundException("Could not get mediafile with provided id")
-        elif req.status_code != 200:
-            raise Exception("Something went wrong while getting mediafile")
-        return req.json()
-
-    def is_metadata_updated(self, old_metadata, new_metadata):
-        if len(old_metadata) != len(new_metadata):
-            return True
-        unmatched = list(old_metadata)
-        for item in new_metadata:
-            try:
-                unmatched.remove(item)
-            except ValueError:
-                return True
-        return len(unmatched) > 0
-
-    def _signal_file_uploaded(self, mediafile, mimetype, url):
-        attributes = {"type": "dams.file_uploaded", "source": "dams"}
-        data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
-        event = to_dict(CloudEvent(attributes, data))
-        app.rabbit.send(event, routing_key="dams.file_uploaded")
-
-    def __get_mimetype_from_filename(self, filename):
-        mime = mimetypes.guess_type(filename, False)[0]
-        return mime if mime else "application/octet-stream"
+    def __get_exif_for_mediafile(self, mediafile):
+        artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
+        if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
+            artist = f"photographer: {photographer}, {artist}"
+        rights = f'license: {self.__get_item_metadata_value(mediafile, "rights")}'
+        if copyrights := self.__get_item_metadata_value(mediafile, "copyright"):
+            rights = f"rightsholder: {copyrights}, {rights}"
+        return artist, rights
 
     def __get_file_mimetype(self, file):
         file.seek(0, 0)
@@ -101,6 +53,16 @@ class S3StorageManager:
         if mime == "application/octet-stream":
             mime = self.__get_mimetype_from_filename(file.filename)
         return mime
+
+    def __get_item_metadata_value(self, item, key):
+        for entry in item["metadata"]:
+            if entry["key"] == key:
+                return entry["value"]
+        return False
+
+    def __get_mimetype_from_filename(self, filename):
+        mime = mimetypes.guess_type(filename, False)[0]
+        return mime if mime else "application/octet-stream"
 
     def __handle_duplicate_file(
         self, mediafile_id, mediafile, mimetype, md5sum, filename, message
@@ -129,6 +91,87 @@ class S3StorageManager:
                 json=payload,
             )
         raise DuplicateFileException(message)
+
+    def _get_mediafile(self, mediafile_id):
+        req = requests.get(
+            f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
+        )
+        if req.status_code == 404:
+            raise MediafileNotFoundException("Could not get mediafile with provided id")
+        elif req.status_code != 200:
+            raise Exception("Something went wrong while getting mediafile")
+        return req.json()
+
+    def _signal_file_uploaded(self, mediafile, mimetype, url):
+        attributes = {"type": "dams.file_uploaded", "source": "dams"}
+        data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
+        event = to_dict(CloudEvent(attributes, data))
+        app.rabbit.send(event, routing_key="dams.file_uploaded")
+
+    def _update_mediafile_information(
+        self, mediafile, md5sum, new_key, mediafile_id, mimetype
+    ):
+        mediafile["identifiers"].append(md5sum)
+        mediafile["original_filename"] = mediafile["filename"]
+        mediafile["filename"] = new_key
+        mediafile["original_file_location"] = f"/download/{new_key}"
+        mediafile[
+            "thumbnail_file_location"
+        ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
+        mediafile["mimetype"] = mimetype
+        requests.put(
+            f"{self.collection_api_url}/mediafiles/{mediafile_id}",
+            json=mediafile,
+            headers=self.headers,
+        )
+
+    def add_exif_data(self, mediafile):
+        if "image" not in mediafile["mimetype"]:
+            return
+        image = self.download_file(mediafile["filename"])
+        img = Image.open(image)
+        exif = img.getexif()
+        exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(mediafile)
+        buf = io.BytesIO()
+        img.save(buf, img.format, exif=exif)
+        buf.seek(0)
+        self.bucket.upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
+
+    def check_file_exists(self, filename, md5sum):
+        objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
+        if len(objects.get("Contents", [])):
+            existing_file = objects.get("Contents", [])[0]["Key"]
+            error_message = (
+                f"Duplicate file {filename} matches existing file {existing_file}."
+            )
+            raise DuplicateFileException(error_message, existing_file, md5sum)
+
+    def check_health(self):
+        return self.client.head_bucket(Bucket=self.bucket_name)
+
+    def delete_files(self, files):
+        payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
+        self.bucket.delete_objects(Delete=payload)
+
+    def download_file(self, file_name):
+        try:
+            file_obj = io.BytesIO()
+            self.bucket.download_fileobj(Key=file_name, Fileobj=file_obj)
+        except ClientError:
+            app.logger.error(f"File {file_name} not found")
+            return None
+        return file_obj
+
+    def is_metadata_updated(self, old_metadata, new_metadata):
+        if len(old_metadata) != len(new_metadata):
+            return True
+        unmatched = list(old_metadata)
+        for item in new_metadata:
+            try:
+                unmatched.remove(item)
+            except ValueError:
+                return True
+        return len(unmatched) > 0
 
     def upload_file(self, file, mediafile_id, key=None):
         mediafile = self._get_mediafile(mediafile_id)
@@ -171,46 +214,3 @@ class S3StorageManager:
             headers=self.headers,
             json=data,
         )
-
-    def download_file(self, file_name):
-        try:
-            file_obj = io.BytesIO()
-            self.bucket.download_fileobj(Key=file_name, Fileobj=file_obj)
-        except ClientError:
-            app.logger.error(f"File {file_name} not found")
-            return None
-        return file_obj
-
-    def __get_item_metadata_value(self, item, key):
-        for entry in item["metadata"]:
-            if entry["key"] == key:
-                return entry["value"]
-        return False
-
-    def __get_exif_for_mediafile(self, mediafile):
-        artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
-        if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
-            artist = f"photographer: {photographer}, {artist}"
-        rights = f'license: {self.__get_item_metadata_value(mediafile, "rights")}'
-        if copyrights := self.__get_item_metadata_value(mediafile, "copyright"):
-            rights = f"rightsholder: {copyrights}, {rights}"
-        return artist, rights
-
-    def add_exif_data(self, mediafile):
-        if "image" not in mediafile["mimetype"]:
-            return
-        image = self.download_file(mediafile["filename"])
-        img = Image.open(image)
-        exif = img.getexif()
-        exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(mediafile)
-        buf = io.BytesIO()
-        img.save(buf, img.format, exif=exif)
-        buf.seek(0)
-        self.bucket.upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
-
-    def delete_files(self, files):
-        payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
-        self.bucket.delete_objects(Delete=payload)
-
-    def check_health(self):
-        return self.client.head_bucket(Bucket=self.bucket_name)

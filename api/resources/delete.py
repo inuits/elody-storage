@@ -3,7 +3,6 @@ import app
 from flask import request
 from flask_restful import abort
 from resources.base_resource import BaseResource
-from werkzeug.exceptions import BadRequest
 
 
 class Delete(BaseResource):
@@ -19,14 +18,9 @@ class Delete(BaseResource):
 
 class DeleteMultiple(BaseResource):
     def __get_request_body(self):
-        try:
-            request_body = request.get_json()
-            invalid_input = request_body is None
-        except BadRequest:
-            invalid_input = True
-        if invalid_input:
-            abort(405, message="Invalid input")
-        return request_body
+        if request_body := request.get_json(silent=True):
+            return request_body
+        abort(405, message="Invalid input")
 
     @app.require_oauth("delete-file-multiple")
     def delete(self):
