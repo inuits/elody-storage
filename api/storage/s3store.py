@@ -136,6 +136,11 @@ class S3StorageManager:
         img.save(buf, img.format, exif=exif)
         buf.seek(0)
         self.bucket.upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
+        requests.patch(
+            f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
+            headers=self.headers,
+            json={"exif": str(exif)},
+        )
 
     def check_file_exists(self, filename, md5sum):
         objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
