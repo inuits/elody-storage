@@ -3,11 +3,17 @@ import app
 from storage.storagemanager import StorageManager
 
 
+def __is_malformed_message(data, fields):
+    if not all(x in data for x in fields):
+        app.logger.error(f"Message malformed: missing one of {fields}")
+        return True
+    return False
+
+
 @app.rabbit.queue("dams.file_uploaded")
 def handle_file_uploaded(routing_key, body, message_id):
     data = body["data"]
-    if any(x not in data for x in ["mediafile"]):
-        app.logger.error("Message malformed: missing 'mediafile'")
+    if __is_malformed_message(data, ["mediafile"]):
         return
     mediafile = data["mediafile"]
     if "mimetype" in mediafile and "metadata" in mediafile and mediafile["metadata"]:
@@ -17,10 +23,7 @@ def handle_file_uploaded(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_scanned")
 def remove_infected_file(routing_key, body, message_id):
     data = body["data"]
-    if any(x not in data for x in ["mediafile_id", "clamav_version", "infected"]):
-        app.logger.error(
-            "Message malformed: missing 'mediafile_id', 'clamav_version' or 'infected'"
-        )
+    if __is_malformed_message(data, ["mediafile_id", "clamav_version", "infected"]):
         return
     if data["infected"]:
         StorageManager().get_storage_engine().delete_files([data["filename"]])
@@ -29,8 +32,7 @@ def remove_infected_file(routing_key, body, message_id):
 @app.rabbit.queue("dams.mediafile_changed")
 def handle_mediafile_updated(routing_key, body, message_id):
     data = body["data"]
-    if any(x not in data for x in ["old_mediafile", "mediafile"]):
-        app.logger.error("Message malformed: missing 'old_mediafile' or 'mediafile'")
+    if __is_malformed_message(data, ["old_mediafile", "mediafile"]):
         return
     old_mediafile = data["old_mediafile"]
     mediafile = data["mediafile"]
@@ -46,8 +48,7 @@ def handle_mediafile_updated(routing_key, body, message_id):
 @app.rabbit.queue("dams.mediafile_deleted")
 def handle_mediafile_deleted(routing_key, body, message_id):
     data = body["data"]
-    if any(x not in data for x in ["mediafile", "linked_entities"]):
-        app.logger.error("Message malformed: missing 'mediafile' or 'linked_entities'")
+    if __is_malformed_message(data, ["mediafile", "linked_entities"]):
         return
     files = [data["mediafile"]["filename"]]
     if "transcode_filename" in data["mediafile"]:
