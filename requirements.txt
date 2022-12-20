@@ -1,8 +1,8 @@
 aniso8601==9.0.1
 Authlib==1.2.0
 blinker==1.5
-boto3==1.26.30
-botocore==1.29.30
+boto3==1.26.33
+botocore==1.29.33
 certifi==2022.12.7
 cffi==1.15.1
 charset-normalizer==2.1.1
@@ -31,7 +31,7 @@ py-healthcheck==1.10.1
 pycparser==2.21
 python-dateutil==2.8.2
 python-magic==0.4.27
-pytz==2022.6
+pytz==2022.7
 rabbitmq-pika-flask==1.2.30
 requests==2.28.1
 retry==0.9.2
