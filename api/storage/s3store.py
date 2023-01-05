@@ -71,7 +71,7 @@ class S3StorageManager:
         try:
             found_mediafile = self._get_mediafile(md5sum)
         except MediafileNotFoundException:
-            self._update_mediafile_information(mediafile, md5sum, filename, mimetype)
+            self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
@@ -93,23 +93,13 @@ class S3StorageManager:
             )
         raise DuplicateFileException(message)
 
-    def _get_mediafile(self, mediafile_id):
-        req = requests.get(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
-        )
-        if req.status_code == 404:
-            raise MediafileNotFoundException("Could not get mediafile with provided id")
-        elif req.status_code != 200:
-            raise Exception("Something went wrong while getting mediafile")
-        return req.json()
-
-    def _signal_file_uploaded(self, mediafile, mimetype, url):
+    def __signal_file_uploaded(self, mediafile, mimetype, url):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
         data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
-    def _update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
+    def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
         mediafile["identifiers"].append(md5sum)
         mediafile["original_filename"] = mediafile["filename"]
         mediafile["filename"] = new_key
@@ -123,6 +113,16 @@ class S3StorageManager:
             json=mediafile,
             headers=self.headers,
         )
+
+    def _get_mediafile(self, mediafile_id):
+        req = requests.get(
+            f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
+        )
+        if req.status_code == 404:
+            raise MediafileNotFoundException("Could not get mediafile with provided id")
+        elif req.status_code != 200:
+            raise Exception("Something went wrong while getting mediafile")
+        return req.json()
 
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
@@ -191,8 +191,8 @@ class S3StorageManager:
             )
         key = f"{md5sum}-{key}"
         self.bucket.upload_fileobj(Fileobj=file, Key=key)
-        self._update_mediafile_information(mediafile, md5sum, key, mimetype)
-        self._signal_file_uploaded(
+        self.__update_mediafile_information(mediafile, md5sum, key, mimetype)
+        self.__signal_file_uploaded(
             mediafile,
             mimetype,
             f'{self.storage_api_url}{mediafile["original_file_location"]}',

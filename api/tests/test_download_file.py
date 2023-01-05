@@ -6,11 +6,8 @@ from unittest.mock import patch, MagicMock
 
 @patch("app.jobs_extension", new=MagicMock())
 @patch("app.rabbit", new=MagicMock())
+@patch("requests.put", new=MagicMock())
 @patch("storage.s3store.S3StorageManager._get_mediafile", new=MagicMock())
-@patch("storage.s3store.S3StorageManager._signal_file_uploaded", new=MagicMock())
-@patch(
-    "storage.s3store.S3StorageManager._update_mediafile_information", new=MagicMock()
-)
 class DownloadFileTest(BaseCase):
     def test_download(self):
         data = dict()
