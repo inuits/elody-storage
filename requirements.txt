@@ -38,5 +38,5 @@ retry==0.9.2
 s3transfer==0.6.0
 sentry-sdk[flask]==0.10.2
 six==1.16.0
-urllib3==1.26.13
+urllib3==1.26.14
 Werkzeug==2.2.2
