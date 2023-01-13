@@ -65,7 +65,7 @@ class S3StorageManager:
         return mime if mime else "application/octet-stream"
 
     def __get_raw_id(self, item):
-        return item["_key"] if "_key" in item else item["_id"]
+        return item.get("_key", item["_id"])
 
     def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
         try:
