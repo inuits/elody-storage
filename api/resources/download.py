@@ -2,7 +2,9 @@ import app
 import mimetypes
 import re
 
+from exceptions import FileNotFoundException
 from flask import request, Response, stream_with_context
+from flask_restful import abort
 from resources.base_resource import BaseResource
 from werkzeug.datastructures import Headers
 
@@ -25,7 +27,10 @@ class Download(BaseResource):
     @app.require_oauth("download-file")
     def get(self, key):
         chunk = False
-        file_object = self.storage.download_file(key)
+        try:
+            file_object = self.storage.download_file(key)
+        except FileNotFoundException as ex:
+            abort(404, message=str(ex))
         content_type = self.__get_mimetype_from_filename(key)
         full_content = file_object["ContentLength"]
         headers = Headers()
