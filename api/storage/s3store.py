@@ -131,7 +131,7 @@ class S3StorageManager:
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
             return
-        image = self.download_file(mediafile["filename"])
+        image = self.download_file(mediafile["filename"])["Body"]
         img = Image.open(image)
         exif = img.getexif()
         exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(mediafile)
