@@ -161,10 +161,16 @@ class S3StorageManager:
         payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
         self.bucket.delete_objects(Delete=payload)
 
-    def download_file(self, file_name):
+    def download_file(self, file_name, range=None):
         try:
-            file_obj = io.BytesIO()
-            self.bucket.download_fileobj(Key=file_name, Fileobj=file_obj)
+            if range:
+                file_obj = self.client.get_object(
+                    Bucket=self.bucket_name, Key=file_name, Range=range
+                )
+            else:
+                file_obj = self.client.get_object(
+                    Bucket=self.bucket_name, Key=file_name
+                )
         except ClientError:
             message = f"File {file_name} not found"
             app.logger.error(message)
