@@ -131,7 +131,7 @@ class S3StorageManager:
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
             return
-        image = self.download_file(mediafile["filename"])["Body"]
+        image = self.download_file(mediafile["filename"])["stream"]
         img = Image.open(image)
         exif = img.getexif()
         exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(mediafile)
@@ -175,7 +175,10 @@ class S3StorageManager:
             message = f"File {file_name} not found"
             app.logger.error(message)
             raise FileNotFoundException(message)
-        return file_obj
+        return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
+
+    def get_stream_generator(self, stream):
+        return stream.iter_chunks()
 
     def is_metadata_updated(self, old_metadata, new_metadata):
         if len(old_metadata) != len(new_metadata):

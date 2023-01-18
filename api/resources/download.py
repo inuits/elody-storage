@@ -32,11 +32,11 @@ class Download(BaseResource):
         except FileNotFoundException as ex:
             abort(404, message=str(ex))
         content_type = self.__get_mimetype_from_filename(key)
-        full_content = file_object["ContentLength"]
+        full_length = file_object["content_length"]
         headers = Headers()
         headers["Accept-Ranges"] = "bytes"
         headers["Content-Type"] = content_type
-        headers["Content-Length"] = file_object["ContentLength"]
+        headers["Content-Length"] = full_length
         if range_header := request.headers.get("Range"):
             byte_start, byte_end, length = self.__get_byte_range(range_header)
             if byte_end:
@@ -45,15 +45,17 @@ class Download(BaseResource):
                     key, f"bytes={byte_start}-{byte_end}"
                 )
                 end = byte_start + length - 1
-                headers["Content-Range"] = f"bytes {byte_start}-{end}/{full_content}"
+                headers["Content-Range"] = f"bytes {byte_start}-{end}/{full_length}"
                 headers["Content-Transfer-Encoding"] = "binary"
                 headers["Connection"] = "Keep-Alive"
                 headers["Content-Type"] = content_type
-                headers["Content-Length"] = (
-                    "1" if byte_end == 1 else file_object["ContentLength"]
-                )
+                headers["Content-Length"] = file_object["content_length"]
+                if byte_end == 1:
+                    headers["Content-Length"] = "1"
         response = Response(
-            stream_with_context(file_object["Body"].iter_chunks()),
+            stream_with_context(
+                self.storage.get_stream_generator(file_object["stream"])
+            ),
             mimetype=content_type,
             content_type=content_type,
             headers=headers,
