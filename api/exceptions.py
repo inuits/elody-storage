@@ -6,5 +6,9 @@ class DuplicateFileException(Exception):
         self.md5sum = md5sum
 
 
+class FileNotFoundException(Exception):
+    pass
+
+
 class MediafileNotFoundException(Exception):
     pass

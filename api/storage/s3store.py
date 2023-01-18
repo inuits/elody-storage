@@ -10,7 +10,11 @@ import requests
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
-from exceptions import DuplicateFileException, MediafileNotFoundException
+from exceptions import (
+    DuplicateFileException,
+    MediafileNotFoundException,
+    FileNotFoundException,
+)
 from humanfriendly import parse_size
 from PIL import Image
 
@@ -162,8 +166,9 @@ class S3StorageManager:
             file_obj = io.BytesIO()
             self.bucket.download_fileobj(Key=file_name, Fileobj=file_obj)
         except ClientError:
-            app.logger.error(f"File {file_name} not found")
-            return None
+            message = f"File {file_name} not found"
+            app.logger.error(message)
+            raise FileNotFoundException(message)
         return file_obj
 
     def is_metadata_updated(self, old_metadata, new_metadata):

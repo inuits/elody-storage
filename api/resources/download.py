@@ -1,6 +1,7 @@
 import app
 import magic
 
+from exceptions import FileNotFoundException
 from flask import after_this_request, Response
 from flask_restful import abort
 from humanfriendly import parse_size
@@ -10,9 +11,10 @@ from resources.base_resource import BaseResource
 class Download(BaseResource):
     @app.require_oauth("download-file")
     def get(self, key):
-        output = self.storage.download_file(key)
-        if not output:
-            abort(404, message=f"File {key} doesn't exist")
+        try:
+            output = self.storage.download_file(key)
+        except FileNotFoundException as ex:
+            abort(404, message=str(ex))
 
         @after_this_request
         def add_header(response):
