@@ -22,8 +22,7 @@ class Download(BaseResource):
             return response
 
         def read_file():
-            while data := output.read(parse_size("1 MiB")):
-                yield data
+            yield from output
 
         mime = magic.Magic(mime=True).from_buffer(output.read(parse_size("8 KiB")))
         output.seek(0)
