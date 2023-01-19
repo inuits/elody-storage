@@ -3,18 +3,13 @@ import boto3
 import hashlib
 import io
 import magic
-import mimetypes
 import os
 import requests
+import util
 
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
-from exceptions import (
-    DuplicateFileException,
-    MediafileNotFoundException,
-    FileNotFoundException,
-)
 from humanfriendly import parse_size
 from PIL import Image
 
@@ -55,7 +50,7 @@ class S3StorageManager:
         mime = magic.Magic(mime=True).from_buffer(file.read(parse_size("8 KiB")))
         file.seek(0, 0)
         if mime == "application/octet-stream":
-            mime = self.__get_mimetype_from_filename(file.filename)
+            mime = util.get_mimetype_from_filename(file.filename)
         return mime
 
     def __get_item_metadata_value(self, item, key):
@@ -64,22 +59,18 @@ class S3StorageManager:
                 return entry["value"]
         return False
 
-    def __get_mimetype_from_filename(self, filename):
-        mime = mimetypes.guess_type(filename, False)[0]
-        return mime if mime else "application/octet-stream"
-
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
     def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
         try:
             found_mediafile = self._get_mediafile(md5sum)
-        except MediafileNotFoundException:
+        except util.MediafileNotFoundException:
             self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
-            raise DuplicateFileException(message)
+            raise util.DuplicateFileException(message)
         mediafile_id = self.__get_raw_id(mediafile)
         if self.__get_raw_id(found_mediafile) != mediafile_id:
             requests.delete(
@@ -95,7 +86,7 @@ class S3StorageManager:
                 headers=self.headers,
                 json=payload,
             )
-        raise DuplicateFileException(message)
+        raise util.DuplicateFileException(message)
 
     def __signal_file_uploaded(self, mediafile, mimetype, url):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
@@ -123,7 +114,9 @@ class S3StorageManager:
             f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
         )
         if req.status_code == 404:
-            raise MediafileNotFoundException("Could not get mediafile with provided id")
+            raise util.MediafileNotFoundException(
+                "Could not get mediafile with provided id"
+            )
         elif req.status_code != 200:
             raise Exception("Something went wrong while getting mediafile")
         return req.json()
@@ -152,7 +145,7 @@ class S3StorageManager:
             error_message = (
                 f"Duplicate file {filename} matches existing file {existing_file}."
             )
-            raise DuplicateFileException(error_message, existing_file, md5sum)
+            raise util.DuplicateFileException(error_message, existing_file, md5sum)
 
     def check_health(self):
         return self.client.head_bucket(Bucket=self.bucket_name)
@@ -174,7 +167,7 @@ class S3StorageManager:
         except ClientError:
             message = f"File {file_name} not found"
             app.logger.error(message)
-            raise FileNotFoundException(message)
+            raise util.FileNotFoundException(message)
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
 
     def get_stream_generator(self, stream):
@@ -199,7 +192,7 @@ class S3StorageManager:
         mimetype = self.__get_file_mimetype(file)
         try:
             self.check_file_exists(file.filename, md5sum)
-        except DuplicateFileException as ex:
+        except util.DuplicateFileException as ex:
             self.__handle_duplicate_file(
                 mediafile, mimetype, ex.md5sum, ex.filename, ex.message
             )

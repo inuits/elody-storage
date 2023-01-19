@@ -1,6 +1,6 @@
 import app
 
-from exceptions import DuplicateFileException
+from util import DuplicateFileException
 from resources.base_resource import BaseResource
 
 

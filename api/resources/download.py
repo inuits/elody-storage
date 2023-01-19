@@ -1,8 +1,7 @@
 import app
-import mimetypes
 import re
+import util
 
-from exceptions import FileNotFoundException
 from flask import request, Response, stream_with_context
 from flask_restful import abort
 from resources.base_resource import BaseResource
@@ -20,18 +19,14 @@ class Download(BaseResource):
             length = byte2 + 1 - byte1
         return byte1, byte2, length
 
-    def __get_mimetype_from_filename(self, filename):
-        mime = mimetypes.guess_type(filename, False)[0]
-        return mime if mime else "application/octet-stream"
-
     @app.require_oauth("download-file")
     def get(self, key):
         chunk = False
         try:
             file_object = self.storage.download_file(key)
-        except FileNotFoundException as ex:
+        except util.FileNotFoundException as ex:
             abort(404, message=str(ex))
-        content_type = self.__get_mimetype_from_filename(key)
+        content_type = util.get_mimetype_from_filename(key)
         full_length = file_object["content_length"]
         headers = Headers()
         headers["Accept-Ranges"] = "bytes"

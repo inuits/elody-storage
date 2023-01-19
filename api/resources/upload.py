@@ -1,6 +1,6 @@
 import app
 
-from exceptions import DuplicateFileException, MediafileNotFoundException
+from util import DuplicateFileException, MediafileNotFoundException
 from flask import request
 from inuits_jwt_auth.authorization import current_token
 from resources.base_resource import BaseResource
