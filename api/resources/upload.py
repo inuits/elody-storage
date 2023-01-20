@@ -46,16 +46,11 @@ class Upload(BaseResource):
                 self.storage.upload_transcode(file, mediafile_id)
             else:
                 self.storage.upload_file(file, mediafile_id, key)
-        except DuplicateFileException as ex:
+        except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()
             app.jobs_extension.fail_job(job, message=str(ex))
-            return str(ex), 409
-        except Exception as ex:
-            if file:
-                file.close()
-            app.jobs_extension.fail_job(job, message=str(ex))
-            return str(ex), 400
+            return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
         app.jobs_extension.finish_job(
             job, message=f"Successfully uploaded {file.filename}"
         )
