@@ -10,6 +10,20 @@ from werkzeug.datastructures import FileStorage
 
 
 class Upload(BaseResource):
+    def __get_file_object(self, key):
+        if request.files:
+            file = request.files["file"]
+        else:
+            file = tempfile.NamedTemporaryFile(mode="ab+")
+            while chunk := request.stream.read(1024):
+                file.write(chunk)
+            file = FileStorage(stream=file, filename=key)
+            if not file.filename:
+                file.close()
+                abort(400, message="Could not get filename for streamed object")
+            file.seek(0)
+        return file
+
     def __get_mediafile_id(self, req):
         if mediafile_id := req.args.get("id"):
             return mediafile_id
@@ -24,17 +38,7 @@ class Upload(BaseResource):
         )
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
         try:
-            if request.files:
-                file = request.files["file"]
-            else:
-                file = tempfile.NamedTemporaryFile(mode="ab+")
-                while chunk := request.stream.read(1024):
-                    file.write(chunk)
-                file = FileStorage(stream=file, filename=key)
-                if not file.filename:
-                    file.close()
-                    abort(400, message="Could not get filename for streamed object")
-                file.seek(0)
+            file = self.__get_file_object(key)
             mediafile_id = self.__get_mediafile_id(request)
             app.jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
