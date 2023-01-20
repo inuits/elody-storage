@@ -37,6 +37,7 @@ class Upload(BaseResource):
             user=dict(current_token).get("email", "default_uploader"),
         )
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
+        file = None
         try:
             file = self.__get_file_object(key)
             mediafile_id = self.__get_mediafile_id(request)
@@ -46,9 +47,13 @@ class Upload(BaseResource):
             else:
                 self.storage.upload_file(file, mediafile_id, key)
         except DuplicateFileException as ex:
+            if file:
+                file.close()
             app.jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 409
         except Exception as ex:
+            if file:
+                file.close()
             app.jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 400
         app.jobs_extension.finish_job(
