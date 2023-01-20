@@ -1,9 +1,12 @@
 import app
+import tempfile
 
-from util import DuplicateFileException, MediafileNotFoundException
 from flask import request
+from flask_restful import abort
 from inuits_jwt_auth.authorization import current_token
 from resources.base_resource import BaseResource
+from util import DuplicateFileException, MediafileNotFoundException
+from werkzeug.datastructures import FileStorage
 
 
 class Upload(BaseResource):
@@ -21,7 +24,17 @@ class Upload(BaseResource):
         )
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
         try:
-            file = request.files["file"]
+            if request.files:
+                file = request.files["file"]
+            else:
+                file = tempfile.NamedTemporaryFile(mode="ab+")
+                while chunk := request.stream.read(1024):
+                    file.write(chunk)
+                file = FileStorage(stream=file, filename=key)
+                if not file.filename:
+                    file.close()
+                    abort(400, message="Could not get filename for streamed object")
+                file.seek(0)
             mediafile_id = self.__get_mediafile_id(request)
             app.jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
@@ -37,6 +50,7 @@ class Upload(BaseResource):
         app.jobs_extension.finish_job(
             job, message=f"Successfully uploaded {file.filename}"
         )
+        file.close()
         return "", 201
 
 
