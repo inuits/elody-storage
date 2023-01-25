@@ -31,7 +31,7 @@ def add_exif_data_to_image(routing_key, body, message_id):
 
 
 @app.rabbit.queue("dams.file_scanned")
-def remove_infected_file(routing_key, body, message_id):
+def remove_infected_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile_id", "clamav_version", "infected"]):
         return
@@ -40,7 +40,7 @@ def remove_infected_file(routing_key, body, message_id):
 
 
 @app.rabbit.queue("dams.mediafile_deleted")
-def handle_mediafile_deleted(routing_key, body, message_id):
+def remove_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile", "linked_entities"]):
         return
