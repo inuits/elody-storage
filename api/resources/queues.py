@@ -10,14 +10,24 @@ def __is_malformed_message(data, fields):
     return False
 
 
-@app.rabbit.queue("dams.file_uploaded")
-def handle_file_uploaded(routing_key, body, message_id):
+@app.rabbit.queue(["dams.file_uploaded", "dams.mediafile_changed"])
+def add_exif_data_to_image(routing_key, body, message_id):
     data = body["data"]
-    if __is_malformed_message(data, ["mediafile"]):
+    required = ["mediafile"]
+    if routing_key == "dams.mediafile_changed":
+        required.append("old_mediafile")
+    if __is_malformed_message(data, required):
         return
     mediafile = data["mediafile"]
-    if "mimetype" in mediafile and "metadata" in mediafile and mediafile["metadata"]:
-        StorageManager().get_storage_engine().add_exif_data(mediafile)
+    old_mediafile = data.get("old_mediafile")
+    if not mediafile.get("mimetype") or not mediafile.get("metadata"):
+        return
+    storage = StorageManager().get_storage_engine()
+    if old_mediafile and not storage.is_metadata_updated(
+        old_mediafile.get("metadata", []), mediafile["metadata"]
+    ):
+        return
+    storage.add_exif_data(mediafile)
 
 
 @app.rabbit.queue("dams.file_scanned")
@@ -27,22 +37,6 @@ def remove_infected_file(routing_key, body, message_id):
         return
     if data["infected"]:
         StorageManager().get_storage_engine().delete_files([data["filename"]])
-
-
-@app.rabbit.queue("dams.mediafile_changed")
-def handle_mediafile_updated(routing_key, body, message_id):
-    data = body["data"]
-    if __is_malformed_message(data, ["old_mediafile", "mediafile"]):
-        return
-    old_mediafile = data["old_mediafile"]
-    mediafile = data["mediafile"]
-    if "mimetype" not in mediafile or "metadata" not in mediafile:
-        return
-    storage = StorageManager().get_storage_engine()
-    if "metadata" not in old_mediafile or storage.is_metadata_updated(
-        old_mediafile["metadata"], mediafile["metadata"]
-    ):
-        storage.add_exif_data(mediafile)
 
 
 @app.rabbit.queue("dams.mediafile_deleted")
