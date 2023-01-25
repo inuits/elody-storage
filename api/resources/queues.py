@@ -27,7 +27,7 @@ def add_exif_data_to_image(routing_key, body, message_id):
         old_mediafile.get("metadata", []), mediafile["metadata"]
     ):
         return
-    storage.add_exif_data(mediafile)
+    # storage.add_exif_data(mediafile)
 
 
 @app.rabbit.queue("dams.file_scanned")
