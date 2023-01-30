@@ -3,7 +3,6 @@ import shutil
 import tempfile
 
 from flask import request
-from flask_restful import abort
 from inuits_jwt_auth.authorization import current_token
 from resources.base_resource import BaseResource
 from util import DuplicateFileException, MediafileNotFoundException
@@ -26,7 +25,7 @@ class Upload(BaseResource):
             return file.filename
         if getattr(file, "name", None):
             return file.name
-        abort(400, message="Could not determine filename for upload")
+        raise Exception("Could not determine filename for upload")
 
     def __get_mediafile_id(self, req):
         if mediafile_id := req.args.get("id"):
