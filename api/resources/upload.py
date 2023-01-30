@@ -1,4 +1,5 @@
 import app
+import shutil
 import tempfile
 
 from flask import request
@@ -6,23 +7,26 @@ from flask_restful import abort
 from inuits_jwt_auth.authorization import current_token
 from resources.base_resource import BaseResource
 from util import DuplicateFileException, MediafileNotFoundException
-from werkzeug.datastructures import FileStorage
 
 
 class Upload(BaseResource):
-    def __get_file_object(self, key):
+    def __get_file_object(self):
         if request.files:
             file = request.files["file"]
         else:
             file = tempfile.NamedTemporaryFile(mode="ab+")
-            while chunk := request.stream.read(1024):
-                file.write(chunk)
-            file = FileStorage(stream=file, filename=key)
-            if not file.filename:
-                file.close()
-                abort(400, message="Could not get filename for streamed object")
+            shutil.copyfileobj(request.stream, file)
             file.seek(0)
         return file
+
+    def __get_key_for_file(self, key, file):
+        if key:
+            return key
+        if getattr(file, "filename", None):
+            return file.filename
+        if getattr(file, "name", None):
+            return file.name
+        abort(400, message="Could not determine filename for upload")
 
     def __get_mediafile_id(self, req):
         if mediafile_id := req.args.get("id"):
@@ -39,11 +43,12 @@ class Upload(BaseResource):
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
         file = None
         try:
-            file = self.__get_file_object(key)
+            file = self.__get_file_object()
+            key = self.__get_key_for_file(key, file)
             mediafile_id = self.__get_mediafile_id(request)
             app.jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
-                self.storage.upload_transcode(file, mediafile_id)
+                self.storage.upload_transcode(file, mediafile_id, key)
             else:
                 self.storage.upload_file(file, mediafile_id, key)
         except (DuplicateFileException, Exception) as ex:
@@ -51,9 +56,7 @@ class Upload(BaseResource):
                 file.close()
             app.jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
-        app.jobs_extension.finish_job(
-            job, message=f"Successfully uploaded {file.filename}"
-        )
+        app.jobs_extension.finish_job(job, message=f"Successfully uploaded {key}")
         file.close()
         return "", 201
 
