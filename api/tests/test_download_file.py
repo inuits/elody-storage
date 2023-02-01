@@ -29,5 +29,5 @@ class DownloadFileTest(BaseCase):
 
         self.assertEqual(1, len(response.json))
         self.assertEqual(str, type(response.json["message"]))
-        self.assertEqual("File test.png doesn't exist", response.json["message"])
+        self.assertEqual("File test.png not found", response.json["message"])
         self.assertEqual(404, response.status_code)
