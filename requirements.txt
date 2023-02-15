@@ -1,8 +1,8 @@
 aniso8601==9.0.1
 Authlib==1.2.0
 blinker==1.5
-boto3==1.26.66
-botocore==1.29.66
+boto3==1.26.71
+botocore==1.29.71
 certifi==2022.12.7
 cffi==1.15.1
 charset-normalizer==3.0.1
@@ -39,4 +39,4 @@ s3transfer==0.6.0
 sentry-sdk[flask]==0.10.2
 six==1.16.0
 urllib3==1.26.14
-Werkzeug==2.2.2
+Werkzeug==2.2.3
