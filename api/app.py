@@ -3,6 +3,7 @@ import logging
 import os
 
 from flask import Flask
+from flask_cors import CORS
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
@@ -39,6 +40,7 @@ app.config.update(
         "DEBUG": True,
     }
 )
+cors = CORS(app, origins=[str(os.getenv("DAMS_FRONTEND_URL"))])
 
 logging.basicConfig(
     format="%(asctime)s %(process)d,%(threadName)s %(filename)s:%(lineno)d [%(levelname)s] %(message)s",
