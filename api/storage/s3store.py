@@ -23,6 +23,7 @@ class S3StorageManager:
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY"),
         )
         self.bucket_name = os.getenv("MINIO_BUCKET")
+        self.bucket_prefix = os.getenv("MINIO_BUCKET_PREFIX")
         self.bucket = self.s3.Bucket(self.bucket_name)
         self.client = self.bucket.meta.client
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
@@ -58,6 +59,9 @@ class S3StorageManager:
             if entry["key"] == key:
                 return entry["value"]
         return False
+
+    def __get_key_with_prefix(self, key):
+        return f"{self.bucket_prefix}{key}" if self.bucket_prefix else key
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -131,7 +135,9 @@ class S3StorageManager:
         buf = io.BytesIO()
         img.save(buf, img.format, exif=exif)
         buf.seek(0)
-        self.bucket.upload_fileobj(Fileobj=buf, Key=mediafile["filename"])
+        self.bucket.upload_fileobj(
+            Fileobj=buf, Key=self.__get_key_with_prefix(mediafile["filename"])
+        )
         requests.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
             headers=self.headers,
@@ -158,11 +164,13 @@ class S3StorageManager:
         try:
             if range:
                 file_obj = self.client.get_object(
-                    Bucket=self.bucket_name, Key=file_name, Range=range
+                    Bucket=self.bucket_name,
+                    Key=self.__get_key_with_prefix(file_name),
+                    Range=range,
                 )
             else:
                 file_obj = self.client.get_object(
-                    Bucket=self.bucket_name, Key=file_name
+                    Bucket=self.bucket_name, Key=self.__get_key_with_prefix(file_name)
                 )
         except ClientError:
             message = f"File {file_name} not found"
@@ -195,7 +203,7 @@ class S3StorageManager:
                 mediafile, mimetype, ex.md5sum, ex.filename, ex.message
             )
         key = f"{md5sum}-{key}"
-        self.bucket.upload_fileobj(Fileobj=file, Key=key)
+        self.bucket.upload_fileobj(Fileobj=file, Key=self.__get_key_with_prefix(key))
         self.__update_mediafile_information(mediafile, md5sum, key, mimetype)
         self.__signal_file_uploaded(
             mediafile,
@@ -208,7 +216,7 @@ class S3StorageManager:
         md5sum = self.__calculate_md5(file)
         key = f"{md5sum}-transcode-{key}"
         self.check_file_exists(key, md5sum)
-        self.bucket.upload_fileobj(Fileobj=file, Key=key)
+        self.bucket.upload_fileobj(Fileobj=file, Key=self.__get_key_with_prefix(key))
         mediafile["identifiers"].append(md5sum)
         data = {
             "identifiers": mediafile["identifiers"],
