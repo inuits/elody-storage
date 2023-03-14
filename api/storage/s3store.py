@@ -82,9 +82,9 @@ class S3StorageManager:
                 headers=self.headers,
             )
             message = f"{message} Existing mediafile for file found, deleting new one."
-        if self.is_metadata_updated(found_mediafile["metadata"], mediafile["metadata"]):
+        if self.is_metadata_updated(found_mediafile, mediafile):
             message = f"{message} Metadata not up-to-date, updating."
-            payload = {"metadata": mediafile["metadata"]}
+            payload = {"metadata": mediafile.get("metadata", [])}
             requests.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}",
                 headers=self.headers,
@@ -181,7 +181,9 @@ class S3StorageManager:
     def get_stream_generator(self, stream):
         return stream.iter_chunks()
 
-    def is_metadata_updated(self, old_metadata, new_metadata):
+    def is_metadata_updated(self, old_mediafile, new_mediafile):
+        old_metadata = old_mediafile.get("metadata", [])
+        new_metadata = new_mediafile.get("metadata", [])
         if len(old_metadata) != len(new_metadata):
             return True
         unmatched = list(old_metadata)

@@ -23,9 +23,7 @@ def add_exif_data_to_image(routing_key, body, message_id):
     if not mediafile.get("mimetype") or not mediafile.get("metadata"):
         return
     storage = StorageManager().get_storage_engine()
-    if old_mediafile and not storage.is_metadata_updated(
-        old_mediafile.get("metadata", []), mediafile["metadata"]
-    ):
+    if old_mediafile and not storage.is_metadata_updated(old_mediafile, mediafile):
         return
     # storage.add_exif_data(mediafile)
 
