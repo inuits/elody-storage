@@ -1,9 +1,9 @@
 attrs==22.2.0
 black==23.1.0
-coverage==7.2.1
+coverage==7.2.2
 exceptiongroup==1.1.1
 iniconfig==2.0.0
-moto==4.1.4
+moto==4.1.5
 mypy-extensions==1.0.0
 pathspec==0.11.1
 platformdirs==3.1.1
