@@ -2,8 +2,9 @@ import app
 import shutil
 import tempfile
 
+from app import policy_factory
 from flask import request
-from inuits_jwt_auth.authorization import current_token
+from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 from util import DuplicateFileException, MediafileNotFoundException
 
@@ -32,12 +33,12 @@ class Upload(BaseResource):
             return mediafile_id
         raise MediafileNotFoundException("No mediafile id provided")
 
-    @app.require_oauth("upload-file")
+    @policy_factory.apply_policies(RequestContext(request, ["upload-file"]))
     def post(self, key=None, transcode=False):
         job = app.jobs_extension.create_new_job(
             f'Starting {"transcode" if transcode else "file"} upload',
             f'dams.upload_{"transcode" if transcode else "file"}',
-            user=dict(current_token).get("email", "default_uploader"),
+            user=policy_factory.get_user_context().email or "default_uploader",
         )
         app.jobs_extension.progress_job(job, amount_of_jobs=1)
         file = None
@@ -61,12 +62,12 @@ class Upload(BaseResource):
 
 
 class UploadKey(Upload):
-    @app.require_oauth("upload-file-key")
+    @policy_factory.apply_policies(RequestContext(request, ["upload-file-key"]))
     def post(self, key):
         return super().post(key)
 
 
 class UploadTranscode(Upload):
-    @app.require_oauth("upload-transcode")
+    @policy_factory.apply_policies(RequestContext(request, ["upload-transcode"]))
     def post(self):
         return super().post(transcode=True)

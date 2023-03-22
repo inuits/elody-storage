@@ -8,7 +8,9 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
+from inuits_policy_based_auth import PolicyFactory
 from job_helper.job_extension import JobExtension
+from policy_loader import load_policies
 from rabbitmq_pika_flask import RabbitMQ
 from storage.storagemanager import StorageManager
 
@@ -71,6 +73,9 @@ validator = JWTValidator(
 require_oauth.register_token_validator(validator)
 
 app.register_blueprint(swaggerui_blueprint)
+
+policy_factory = PolicyFactory(logger)
+load_policies(policy_factory)
 
 
 def rabbit_available():

@@ -1,9 +1,10 @@
-import app
 import re
 import util
 
+from app import policy_factory
 from flask import request, Response, stream_with_context
 from flask_restful import abort
+from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 from werkzeug.datastructures import Headers
 
@@ -19,7 +20,7 @@ class Download(BaseResource):
             length = byte2 + 1 - byte1
         return byte1, byte2, length
 
-    @app.require_oauth("download-file")
+    @policy_factory.apply_policies(RequestContext(request, ["download-file"]))
     def get(self, key):
         chunk = False
         try:
