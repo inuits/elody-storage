@@ -36,8 +36,6 @@ app.config.update(
         "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME"),
         "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL"),
         "SECRET_KEY": "SomethingNotEntirelySecret",
-        "TESTING": True,
-        "DEBUG": True,
     }
 )
 cors = CORS(app, origins=[str(os.getenv("DAMS_FRONTEND_URL"))])
@@ -111,4 +109,4 @@ api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
