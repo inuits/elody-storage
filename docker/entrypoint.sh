@@ -18,13 +18,11 @@ fi
 
 if [ "$APP_ENV" = "dev" ]; then
   echo "Starting development server..."
-  export FLASK_ENV=development
   export FLASK_DEBUG='1'
   cd ~/api
   exec ~/.local/bin/flask run --host=0.0.0.0
 else
   echo "Starting gunicorn server..."
-  export FLASK_ENV=production
   cd ~/api
   exec ~/.local/bin/gunicorn ${GUNICORN_SSL_CA} -b 0.0.0.0 --timeout 0 "app:app"
 fi
