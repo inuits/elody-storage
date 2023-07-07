@@ -1,7 +1,6 @@
+import app
 import json
 import mimetypes
-
-from app import logger
 
 
 class DuplicateFileException(Exception):
@@ -30,5 +29,5 @@ def read_json_as_dict(filename):
         with open(filename) as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError) as ex:
-        logger.error(f"Could not read {filename} as a dict: {ex}")
+        app.logger.error(f"Could not read {filename} as a dict: {ex}")
     return {}
