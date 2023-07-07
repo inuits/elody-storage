@@ -1,3 +1,4 @@
+import app
 import boto3
 import hashlib
 import io
@@ -6,7 +7,6 @@ import os
 import requests
 import util
 
-from app import rabbit, logger
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
@@ -96,7 +96,7 @@ class S3StorageManager:
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
         data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
         event = to_dict(CloudEvent(attributes, data))
-        rabbit.send(event, routing_key="dams.file_uploaded")
+        app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
         mediafile["identifiers"].append(md5sum)
@@ -174,7 +174,7 @@ class S3StorageManager:
                 )
         except ClientError:
             message = f"File {file_name} not found"
-            logger.error(message)
+            app.logger.error(message)
             raise util.FileNotFoundException(message)
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
 
