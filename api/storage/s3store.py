@@ -28,7 +28,10 @@ class S3StorageManager:
         self.client = self.bucket.meta.client
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.storage_api_url = os.getenv("STORAGE_API_URL")
-        self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
+        if app.policy_factory.get_user_context().tenant:
+            self.headers = {"apikey": app.policy_factory.get_user_context().tenant}
+        else:
+            self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
     def __calculate_md5(self, file):
         hash_obj = hashlib.md5()
