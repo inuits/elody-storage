@@ -1,4 +1,7 @@
+import json
 import mimetypes
+
+from app import logger
 
 
 class DuplicateFileException(Exception):
@@ -20,3 +23,12 @@ class MediafileNotFoundException(Exception):
 def get_mimetype_from_filename(filename):
     mime = mimetypes.guess_type(filename, False)[0]
     return mime if mime else "application/octet-stream"
+
+
+def read_json_as_dict(filename):
+    try:
+        with open(filename) as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError) as ex:
+        logger.error(f"Could not read {filename} as a dict: {ex}")
+    return {}

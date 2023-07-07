@@ -1,11 +1,10 @@
-import app
-
-from util import DuplicateFileException
+from app import policy_factory
 from resources.base_resource import BaseResource
+from util import DuplicateFileException
 
 
 class Unique(BaseResource):
-    @app.require_oauth("unique")
+    @policy_factory.authenticate()
     def get(self, md5sum):
         try:
             self.storage.check_file_exists("", md5sum)

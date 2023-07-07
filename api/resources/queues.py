@@ -1,16 +1,15 @@
-import app
-
+from app import logger, rabbit
 from storage.storagemanager import StorageManager
 
 
 def __is_malformed_message(data, fields):
     if not all(x in data for x in fields):
-        app.logger.error(f"Message malformed: missing one of {fields}")
+        logger.error(f"Message malformed: missing one of {fields}")
         return True
     return False
 
 
-@app.rabbit.queue(["dams.file_uploaded", "dams.mediafile_changed"])
+@rabbit.queue(["dams.file_uploaded", "dams.mediafile_changed"])
 def add_exif_data_to_image(routing_key, body, message_id):
     data = body["data"]
     required = ["mediafile"]
@@ -28,7 +27,7 @@ def add_exif_data_to_image(routing_key, body, message_id):
     # storage.add_exif_data(mediafile)
 
 
-@app.rabbit.queue("dams.file_scanned")
+@rabbit.queue("dams.file_scanned")
 def remove_infected_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile_id", "clamav_version", "infected"]):
@@ -37,7 +36,7 @@ def remove_infected_file_from_storage(routing_key, body, message_id):
         StorageManager().get_storage_engine().delete_files([data["filename"]])
 
 
-@app.rabbit.queue("dams.mediafile_deleted")
+@rabbit.queue("dams.mediafile_deleted")
 def remove_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile", "linked_entities"]):
@@ -48,4 +47,4 @@ def remove_file_from_storage(routing_key, body, message_id):
     try:
         StorageManager().get_storage_engine().delete_files(files)
     except Exception as ex:
-        app.logger.error(f"Deleting {files} failed with: {ex}")
+        logger.error(f"Deleting {files} failed with: {ex}")

@@ -1,9 +1,8 @@
-import app
 import shutil
 import tempfile
 
+from app import jobs_extension, policy_factory
 from flask import request
-from inuits_jwt_auth.authorization import current_token
 from resources.base_resource import BaseResource
 from util import DuplicateFileException, MediafileNotFoundException
 
@@ -32,20 +31,20 @@ class Upload(BaseResource):
             return mediafile_id
         raise MediafileNotFoundException("No mediafile id provided")
 
-    @app.require_oauth("upload-file")
+    @policy_factory.authenticate()
     def post(self, key=None, transcode=False):
-        job = app.jobs_extension.create_new_job(
+        job = jobs_extension.create_new_job(
             f'Starting {"transcode" if transcode else "file"} upload',
             f'dams.upload_{"transcode" if transcode else "file"}',
-            user=dict(current_token).get("email", "default_uploader"),
+            user=policy_factory.get_user_context().email or "default_uploader",
         )
-        app.jobs_extension.progress_job(job, amount_of_jobs=1)
+        jobs_extension.progress_job(job, amount_of_jobs=1)
         file = None
         try:
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file)
             mediafile_id = self.__get_mediafile_id(request)
-            app.jobs_extension.progress_job(job, mediafile_id=mediafile_id)
+            jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key)
             else:
@@ -53,20 +52,20 @@ class Upload(BaseResource):
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()
-            app.jobs_extension.fail_job(job, message=str(ex))
+            jobs_extension.fail_job(job, message=str(ex))
             return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
-        app.jobs_extension.finish_job(job, message=f"Successfully uploaded {key}")
+        jobs_extension.finish_job(job, message=f"Successfully uploaded {key}")
         file.close()
         return "", 201
 
 
 class UploadKey(Upload):
-    @app.require_oauth("upload-file-key")
+    @policy_factory.authenticate()
     def post(self, key):
         return super().post(key)
 
 
 class UploadTranscode(Upload):
-    @app.require_oauth("upload-transcode")
+    @policy_factory.authenticate()
     def post(self):
         return super().post(transcode=True)

@@ -1,17 +1,16 @@
-import app
-
+from app import logger, policy_factory
 from flask import request
 from flask_restful import abort
 from resources.base_resource import BaseResource
 
 
 class Delete(BaseResource):
-    @app.require_oauth("delete-file")
+    @policy_factory.authenticate()
     def delete(self, key):
         try:
             self.storage.delete_files([key])
         except Exception as ex:
-            app.logger.error(f"Deleting {key} failed with: {ex}")
+            logger.error(f"Deleting {key} failed with: {ex}")
             return str(ex), 400
         return "", 204
 
@@ -22,12 +21,12 @@ class DeleteMultiple(BaseResource):
             return request_body
         abort(405, message="Invalid input")
 
-    @app.require_oauth("delete-file-multiple")
+    @policy_factory.authenticate()
     def delete(self):
         files = self.__get_request_body()
         try:
             self.storage.delete_files(files)
         except Exception as ex:
-            app.logger.error(f"Deleting {files} failed with: {ex}")
+            logger.error(f"Deleting {files} failed with: {ex}")
             return str(ex), 400
         return "", 204

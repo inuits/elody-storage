@@ -1,7 +1,7 @@
-import app
 import re
 import util
 
+from app import policy_factory
 from flask import request, Response, stream_with_context
 from flask_restful import abort
 from resources.base_resource import BaseResource
@@ -19,7 +19,7 @@ class Download(BaseResource):
             length = byte2 + 1 - byte1
         return byte1, byte2, length
 
-    @app.require_oauth("download-file")
+    @policy_factory.authenticate()
     def get(self, key):
         chunk = False
         try:

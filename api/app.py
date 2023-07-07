@@ -3,12 +3,13 @@ import logging
 import os
 import secrets
 
+from apps.loader import load_apps, load_policies
 from flask import Flask
 from flask_cors import CORS
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
-from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
+from inuits_policy_based_auth.policy_factory import PolicyFactory
 from job_helper.job_extension import JobExtension
 from rabbitmq_pika_flask import RabbitMQ
 from storage.storagemanager import StorageManager
@@ -47,22 +48,6 @@ rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 jobs_extension = JobExtension(rabbit)
 
-require_oauth = MyResourceProtector(
-    logger,
-    os.getenv("REQUIRE_TOKEN", True) in ["True", "true", True],
-)
-validator = JWTValidator(
-    logger,
-    os.getenv("STATIC_ISSUER", False),
-    os.getenv("STATIC_PUBLIC_KEY", False),
-    os.getenv("REALMS", "").split(","),
-    os.getenv("ROLE_PERMISSION_FILE", "role_permission.json"),
-    os.getenv("SUPER_ADMIN_ROLE", "role_super_admin"),
-    os.getenv("REMOTE_TOKEN_VALIDATION", False) in ["True", "true", True],
-    os.getenv("REMOTE_PUBLIC_KEY", False),
-)
-require_oauth.register_token_validator(validator)
-
 app.register_blueprint(swaggerui_blueprint)
 
 
@@ -79,6 +64,10 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
     health.add_check(rabbit_available)
     health.add_check(storage_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
+
+policy_factory = PolicyFactory()
+load_apps(app)
+load_policies(policy_factory, logger)
 
 from resources.download import Download
 from resources.unique import Unique
