@@ -28,10 +28,6 @@ class S3StorageManager:
         self.client = self.bucket.meta.client
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.storage_api_url = os.getenv("STORAGE_API_URL")
-        if app.policy_factory.get_user_context().tenant:
-            self.headers = {"apikey": app.policy_factory.get_user_context().tenant}
-        else:
-            self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
     def __calculate_md5(self, file):
         hash_obj = hashlib.md5()
@@ -39,6 +35,12 @@ class S3StorageManager:
             hash_obj.update(chunk)
         file.seek(0)
         return hash_obj.hexdigest()
+
+    def __get_auth_header(self):
+        if app.policy_factory.get_user_context().tenant:
+            return {"apikey": app.policy_factory.get_user_context().tenant}
+        else:
+            return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
     def __get_exif_for_mediafile(self, mediafile):
         artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
@@ -82,7 +84,7 @@ class S3StorageManager:
         if self.__get_raw_id(found_mediafile) != mediafile_id:
             requests.delete(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-                headers=self.headers,
+                headers=self.__get_auth_header(),
             )
             message = f"{message} Existing mediafile for file found, deleting new one."
         if self.is_metadata_updated(found_mediafile, mediafile):
@@ -90,7 +92,7 @@ class S3StorageManager:
             payload = {"metadata": mediafile.get("metadata", [])}
             requests.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}",
-                headers=self.headers,
+                headers=self.__get_auth_header(),
                 json=payload,
             )
         raise util.DuplicateFileException(message)
@@ -113,12 +115,13 @@ class S3StorageManager:
         requests.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
-            headers=self.headers,
+            headers=self.__get_auth_header(),
         )
 
     def _get_mediafile(self, mediafile_id):
         req = requests.get(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=self.headers
+            f"{self.collection_api_url}/mediafiles/{mediafile_id}",
+            headers=self.__get_auth_header(),
         )
         if req.status_code == 404:
             raise util.MediafileNotFoundException(
@@ -143,7 +146,7 @@ class S3StorageManager:
         )
         requests.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
-            headers=self.headers,
+            headers=self.__get_auth_header(),
             json={"exif": str(exif)},
         )
 
@@ -231,6 +234,6 @@ class S3StorageManager:
         }
         requests.patch(
             f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-            headers=self.headers,
+            headers=self.__get_auth_header(),
             json=data,
         )
