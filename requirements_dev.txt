@@ -1,4 +1,4 @@
-black==23.3.0
+black==23.7.0
 coverage==7.2.7
 iniconfig==2.0.0
 moto==4.1.12
