@@ -3,7 +3,7 @@ import logging
 import os
 import secrets
 
-from apps.loader import load_apps, load_policies
+from elody.loader import load_apps, load_policies
 from flask import Flask
 from flask_cors import CORS
 from flask_restful import Api
@@ -66,7 +66,7 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 policy_factory = PolicyFactory()
-load_apps(app)
+load_apps(app, logger)
 load_policies(policy_factory, logger)
 
 from resources.download import Download

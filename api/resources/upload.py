@@ -2,9 +2,9 @@ import shutil
 import tempfile
 
 from app import jobs_extension, policy_factory
+from elody.util import DuplicateFileException, MediafileNotFoundException
 from flask import request
 from resources.base_resource import BaseResource
-from util import DuplicateFileException, MediafileNotFoundException
 
 
 class Upload(BaseResource):

@@ -1,6 +1,6 @@
 import os
 
-from singleton import Singleton
+from elody.util import Singleton
 from storage.s3store import S3StorageManager
 
 

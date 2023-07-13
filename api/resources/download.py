@@ -1,7 +1,7 @@
 import re
-import util
 
 from app import policy_factory
+from elody.util import FileNotFoundException, get_mimetype_from_filename
 from flask import request, Response, stream_with_context
 from flask_restful import abort
 from resources.base_resource import BaseResource
@@ -24,9 +24,9 @@ class Download(BaseResource):
         chunk = False
         try:
             file_object = self.storage.download_file(key)
-        except util.FileNotFoundException as ex:
+        except FileNotFoundException as ex:
             abort(404, message=str(ex))
-        content_type = util.get_mimetype_from_filename(key)
+        content_type = get_mimetype_from_filename(key)
         full_length = file_object["content_length"]
         headers = Headers()
         headers["Accept-Ranges"] = "bytes"

@@ -1,6 +1,6 @@
 from app import policy_factory
+from elody.util import DuplicateFileException
 from resources.base_resource import BaseResource
-from util import DuplicateFileException
 
 
 class Unique(BaseResource):
