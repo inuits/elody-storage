@@ -11,7 +11,7 @@ cloudevents==1.9.0
 cryptography==41.0.2
 decorator==5.1.1
 deprecation==2.1.0
-elody[loader]==0.0.11
+elody[loader]==0.0.12
 Flask==2.3.2
 Flask-Cors==4.0.0
 Flask-RESTful==0.3.10
@@ -19,7 +19,7 @@ flask-swagger-ui==4.11.1
 gunicorn==20.1.0
 humanfriendly==10.0
 idna==3.4
-inuits-policy-based-auth==5.0.0
+inuits-policy-based-auth==5.1.0
 itsdangerous==2.1.2
 Jinja2==3.1.2
 jmespath==1.0.1
