@@ -2,7 +2,7 @@ import shutil
 import tempfile
 
 from app import jobs_extension, policy_factory
-from elody.util import DuplicateFileException, MediafileNotFoundException
+from elody.exceptions import DuplicateFileException, NotFoundException
 from flask import request
 from resources.base_resource import BaseResource
 
@@ -29,7 +29,7 @@ class Upload(BaseResource):
     def __get_mediafile_id(self, req):
         if mediafile_id := req.args.get("id"):
             return mediafile_id
-        raise MediafileNotFoundException("No mediafile id provided")
+        raise NotFoundException("No mediafile id provided")
 
     @policy_factory.authenticate()
     def post(self, key=None, transcode=False):

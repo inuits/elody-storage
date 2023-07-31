@@ -1,7 +1,8 @@
 import re
 
 from app import policy_factory
-from elody.util import FileNotFoundException, get_mimetype_from_filename
+from elody.exceptions import FileNotFoundException
+from elody.util import get_mimetype_from_filename
 from flask import request, Response, stream_with_context
 from flask_restful import abort
 from resources.base_resource import BaseResource

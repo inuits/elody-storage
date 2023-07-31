@@ -1,5 +1,5 @@
 from app import policy_factory
-from elody.util import DuplicateFileException
+from elody.exceptions import DuplicateFileException
 from resources.base_resource import BaseResource
 
 

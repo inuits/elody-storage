@@ -9,12 +9,12 @@ import requests
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
-from elody.util import (
+from elody.exceptions import (
     DuplicateFileException,
     FileNotFoundException,
-    MediafileNotFoundException,
-    get_mimetype_from_filename,
+    NotFoundException,
 )
+from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
 from PIL import Image
 
@@ -79,7 +79,7 @@ class S3StorageManager:
     def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
         try:
             found_mediafile = self._get_mediafile(md5sum)
-        except MediafileNotFoundException:
+        except NotFoundException:
             self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
@@ -129,7 +129,7 @@ class S3StorageManager:
             headers=self.__get_auth_header(),
         )
         if req.status_code == 404:
-            raise MediafileNotFoundException("Could not get mediafile with provided id")
+            raise NotFoundException("Could not get mediafile with provided id")
         elif req.status_code != 200:
             raise Exception("Something went wrong while getting mediafile")
         return req.json()
