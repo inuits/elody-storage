@@ -16,6 +16,7 @@ from elody.exceptions import (
 )
 from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
+from inuits_policy_based_auth.exceptions import NoUserContextException
 from PIL import Image
 
 
@@ -42,8 +43,12 @@ class S3StorageManager:
         return hash_obj.hexdigest()
 
     def __get_auth_header(self):
-        if app.policy_factory.get_user_context().tenant:
-            return {"apikey": app.policy_factory.get_user_context().tenant}
+        try:
+            tenant = app.policy_factory.get_user_context().tenant
+        except NoUserContextException:
+            tenant = ""
+        if tenant:
+            return {"apikey": tenant}
         else:
             return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
@@ -133,6 +138,20 @@ class S3StorageManager:
         elif req.status_code != 200:
             raise Exception("Something went wrong while getting mediafile")
         return req.json()
+
+    def _is_valid_ticket(self, ticket_id: str | None) -> bool:
+        if not ticket_id:
+            return False
+
+        response = requests.get(
+            f"{self.collection_api_url}/ticket/{ticket_id}",
+            headers=self.__get_auth_header(),
+        )
+        if response.status_code != 200:
+            return False
+
+        ticket = response.json()
+        return not ticket["is_expired"]
 
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:

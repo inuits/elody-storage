@@ -75,7 +75,7 @@ load_policies(policy_factory, logger)
 
 from resources.download import Download
 from resources.unique import Unique
-from resources.upload import Upload, UploadKey, UploadTranscode
+from resources.upload import Upload, UploadKey, UploadKeyWithTicket, UploadTranscode
 from resources.spec import AsyncAPISpec, OpenAPISpec
 import resources.queues
 
@@ -91,6 +91,7 @@ api.add_resource(Unique, "/unique/<string:md5sum>")
 
 api.add_resource(Upload, "/upload")
 api.add_resource(UploadKey, "/upload/<string:key>")
+api.add_resource(UploadKeyWithTicket, "/upload-with-ticket/<string:key>")
 api.add_resource(UploadTranscode, "/upload/transcode")
 
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
