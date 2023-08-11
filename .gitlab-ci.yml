@@ -15,3 +15,4 @@ variables:
   CUSTOMER: 'inuits'
   APPLICATION: 'dams-storage'
   SKIP_DEPLOY: 'true'
+  TARGETS: 'coghent,digipolis-asset-engine,digipolis-dams,pza'
