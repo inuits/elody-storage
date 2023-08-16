@@ -1,5 +1,5 @@
 black==23.7.0
-coverage==7.2.7
+coverage==7.3.0
 iniconfig==2.0.0
 moto==4.1.14
 mypy-extensions==1.0.0
