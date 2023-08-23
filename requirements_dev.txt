@@ -1,7 +1,7 @@
 black==23.7.0
 coverage==7.3.0
 iniconfig==2.0.0
-moto==4.1.14
+moto==4.1.15
 mypy-extensions==1.0.0
 pathspec==0.11.2
 platformdirs==3.10.0
