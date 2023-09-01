@@ -73,7 +73,7 @@ policy_factory = PolicyFactory()
 load_apps(app, logger)
 load_policies(policy_factory, logger)
 
-from resources.download import Download
+from resources.download import Download, DownloadWithTicket
 from resources.unique import Unique
 from resources.upload import Upload, UploadKey, UploadKeyWithTicket, UploadTranscode
 from resources.spec import AsyncAPISpec, OpenAPISpec
@@ -86,6 +86,7 @@ if os.getenv("ENABLE_DELETE"):
     api.add_resource(DeleteMultiple, "/delete")
 
 api.add_resource(Download, "/download/<string:key>")
+api.add_resource(DownloadWithTicket, "/download-with-ticket/<string:key>")
 
 api.add_resource(Unique, "/unique/<string:md5sum>")
 

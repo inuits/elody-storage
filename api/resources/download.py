@@ -20,8 +20,7 @@ class Download(BaseResource):
             length = byte2 + 1 - byte1
         return byte1, byte2, length
 
-    @policy_factory.authenticate()
-    def get(self, key):
+    def _handle_file_download(self, key):
         chunk = False
         try:
             file_object = self.storage.download_file(key)
@@ -59,3 +58,15 @@ class Download(BaseResource):
             direct_passthrough=chunk,
         )
         return response
+
+    @policy_factory.authenticate()
+    def get(self, key):
+        return self._handle_file_download(key)
+
+
+class DownloadWithTicket(Download):
+    def get(self, key):
+        ticket_id = request.args.get("ticket_id")
+        if not self.storage._is_valid_ticket(ticket_id):
+            abort(403, message=f"Ticket with id {ticket_id} is not valid")
+        return self._handle_file_download(key)
