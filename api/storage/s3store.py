@@ -139,20 +139,6 @@ class S3StorageManager:
             raise Exception("Something went wrong while getting mediafile")
         return req.json()
 
-    def _is_valid_ticket(self, ticket_id: str | None) -> bool:
-        if not ticket_id:
-            return False
-
-        response = requests.get(
-            f"{self.collection_api_url}/ticket/{ticket_id}",
-            headers=self.__get_auth_header(),
-        )
-        if response.status_code != 200:
-            return False
-
-        ticket = response.json()
-        return not ticket["is_expired"]
-
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
             return
@@ -221,6 +207,17 @@ class S3StorageManager:
             except ValueError:
                 return True
         return len(unmatched) > 0
+
+    def is_valid_ticket(self, ticket_id: str | None) -> bool:
+        if not ticket_id:
+            return False
+        response = requests.get(
+            f"{self.collection_api_url}/ticket/{ticket_id}",
+            headers=self.__get_auth_header(),
+        )
+        if response.status_code != 200:
+            return False
+        return not response.json()["is_expired"]
 
     def upload_file(self, file, mediafile_id, key):
         mediafile = self._get_mediafile(mediafile_id)
