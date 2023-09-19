@@ -1,6 +1,7 @@
 from app import logger, policy_factory
 from flask import request
 from flask_restful import abort
+from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 
 
@@ -21,7 +22,7 @@ class DeleteMultiple(BaseResource):
             return request_body
         abort(405, message="Invalid input")
 
-    @policy_factory.authenticate()
+    @policy_factory.authenticate(RequestContext(request))
     def delete(self):
         files = self.__get_request_body()
         try:

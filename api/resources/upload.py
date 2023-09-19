@@ -5,6 +5,7 @@ from app import jobs_extension, policy_factory
 from elody.exceptions import DuplicateFileException, NotFoundException
 from flask import request
 from flask_restful import abort
+from inuits_policy_based_auth import RequestContext
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from resources.base_resource import BaseResource
 
@@ -65,13 +66,13 @@ class Upload(BaseResource):
         file.close()
         return "", 201
 
-    @policy_factory.authenticate()
+    @policy_factory.authenticate(RequestContext(request))
     def post(self, key=None, transcode=False):
         return self._handle_file_upload(key, transcode)
 
 
 class UploadKey(Upload):
-    @policy_factory.authenticate()
+    @policy_factory.authenticate(RequestContext(request))
     def post(self, key):
         return super().post(key)
 

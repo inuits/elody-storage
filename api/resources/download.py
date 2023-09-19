@@ -5,6 +5,7 @@ from elody.exceptions import FileNotFoundException
 from elody.util import get_mimetype_from_filename
 from flask import request, Response, stream_with_context
 from flask_restful import abort
+from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 from werkzeug.datastructures import Headers
 
@@ -59,7 +60,7 @@ class Download(BaseResource):
         )
         return response
 
-    @policy_factory.authenticate()
+    @policy_factory.authenticate(RequestContext(request))
     def get(self, key):
         return self._handle_file_download(key)
 
