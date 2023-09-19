@@ -86,6 +86,6 @@ class UploadKeyWithTicket(Upload):
 
 
 class UploadTranscode(Upload):
-    @policy_factory.authenticate()
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         return super().post(transcode=True)
