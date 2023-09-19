@@ -92,7 +92,7 @@ class BaseResource(Resource):
         )
         return response
 
-    def _handle_file_upload(self, key=None, transcode=False):
+    def _handle_file_upload(self, key=None, transcode=False, ticket=None):
         try:
             user = policy_factory.get_user_context().email or "default_uploader"
         except NoUserContextException:
@@ -112,7 +112,7 @@ class BaseResource(Resource):
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key)
             else:
-                self.storage.upload_file(file, mediafile_id, key)
+                self.storage.upload_file(file, mediafile_id, key, ticket)
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()

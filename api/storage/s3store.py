@@ -195,6 +195,20 @@ class S3StorageManager:
     def get_stream_generator(self, stream):
         return stream.iter_chunks()
 
+    def get_ticket(self, ticket_id):
+        if not ticket_id:
+            raise Exception("No ticket id given")
+        response = requests.get(
+            f"{self.collection_api_url}/ticket/{ticket_id}",
+            headers=self.__get_auth_header(),
+        )
+        if response.status_code != 200:
+            raise NotFoundException(f"Ticket with id {ticket_id} not found")
+        ticket = response.json()
+        if ticket.get("is_expired", True):
+            raise Exception("Ticket is expired")
+        return ticket
+
     def is_metadata_updated(self, old_mediafile, new_mediafile):
         old_metadata = old_mediafile.get("metadata", [])
         new_metadata = new_mediafile.get("metadata", [])
@@ -208,18 +222,7 @@ class S3StorageManager:
                 return True
         return len(unmatched) > 0
 
-    def is_valid_ticket(self, ticket_id: str | None) -> bool:
-        if not ticket_id:
-            return False
-        response = requests.get(
-            f"{self.collection_api_url}/ticket/{ticket_id}",
-            headers=self.__get_auth_header(),
-        )
-        if response.status_code != 200:
-            return False
-        return not response.json()["is_expired"]
-
-    def upload_file(self, file, mediafile_id, key):
+    def upload_file(self, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)

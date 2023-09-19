@@ -1,6 +1,5 @@
 from app import policy_factory
 from flask import request
-from flask_restful import abort
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 
@@ -13,11 +12,11 @@ class Upload(BaseResource):
 
 class UploadWithTicket(BaseResource):
     def post(self):
-        ticket_id = request.args.get("ticket_id")
-        if not self.storage.is_valid_ticket(ticket_id):
-            abort(403, message=f"Ticket with id {ticket_id} is not valid")
-        # FIXME: pass ticket to use as source of info
-        return self._handle_file_upload()
+        try:
+            ticket = self.storage.get_ticket(request.args.get("ticket_id"))
+        except Exception as ex:
+            return str(ex), 400
+        return self._handle_file_upload(ticket=ticket)
 
 
 class UploadKey(BaseResource):
@@ -28,11 +27,11 @@ class UploadKey(BaseResource):
 
 class UploadKeyWithTicket(BaseResource):
     def post(self, key):
-        ticket_id = request.args.get("ticket_id")
-        if not self.storage.is_valid_ticket(ticket_id):
-            abort(403, message=f"Ticket with id {ticket_id} is not valid")
-        # FIXME: pass ticket to use as source of info (except for key)
-        return self._handle_file_upload(key=key)
+        try:
+            ticket = self.storage.get_ticket(request.args.get("ticket_id"))
+        except Exception as ex:
+            return str(ex), 400
+        return self._handle_file_upload(key=key, ticket=ticket)
 
 
 class UploadTranscode(BaseResource):

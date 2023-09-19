@@ -14,6 +14,6 @@ class Download(BaseResource):
 class DownloadWithTicket(BaseResource):
     def get(self, key):
         ticket_id = request.args.get("ticket_id")
-        if not self.storage.is_valid_ticket(ticket_id):
+        if not self.storage.get_ticket(ticket_id):
             abort(403, message=f"Ticket with id {ticket_id} is not valid")
         return self._handle_file_download(key)
