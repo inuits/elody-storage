@@ -11,6 +11,15 @@ class Upload(BaseResource):
         return self._handle_file_upload()
 
 
+class UploadWithTicket(BaseResource):
+    def post(self):
+        ticket_id = request.args.get("ticket_id")
+        if not self.storage.is_valid_ticket(ticket_id):
+            abort(403, message=f"Ticket with id {ticket_id} is not valid")
+        # FIXME: pass ticket to use as source of info
+        return self._handle_file_upload()
+
+
 class UploadKey(BaseResource):
     @policy_factory.authenticate(RequestContext(request))
     def post(self, key):
@@ -22,6 +31,7 @@ class UploadKeyWithTicket(BaseResource):
         ticket_id = request.args.get("ticket_id")
         if not self.storage.is_valid_ticket(ticket_id):
             abort(403, message=f"Ticket with id {ticket_id} is not valid")
+        # FIXME: pass ticket to use as source of info (except for key)
         return self._handle_file_upload(key=key)
 
 
