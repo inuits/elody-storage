@@ -44,7 +44,7 @@ class S3StorageManager:
 
     def __get_auth_header(self):
         try:
-            tenant = app.policy_factory.get_user_context().tenant
+            tenant = app.policy_factory.get_user_context().x_tenant.id
         except NoUserContextException:
             tenant = ""
         if tenant:
