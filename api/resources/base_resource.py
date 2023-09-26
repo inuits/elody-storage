@@ -39,11 +39,6 @@ class BaseResource(Resource):
             file.seek(0)
         return file
 
-    def __get_mediafile_id(self, req):
-        if mediafile_id := req.args.get("id"):
-            return mediafile_id
-        raise NotFoundException("No mediafile id provided")
-
     def __get_key_for_file(self, key, file):
         if key:
             return key
@@ -53,10 +48,10 @@ class BaseResource(Resource):
             return file.name
         raise Exception("Could not determine filename for upload")
 
-    def _handle_file_download(self, key):
+    def _handle_file_download(self, key, ticket=None):
         chunk = False
         try:
-            file_object = self.storage.download_file(key)
+            file_object = self.storage.download_file(key, ticket=ticket)
         except FileNotFoundException as ex:
             abort(404, message=str(ex))
         content_type = get_mimetype_from_filename(key)
@@ -70,7 +65,7 @@ class BaseResource(Resource):
             if byte_end:
                 chunk = True
                 file_object = self.storage.download_file(
-                    key, f"bytes={byte_start}-{byte_end}"
+                    key, f"bytes={byte_start}-{byte_end}", ticket
                 )
                 end = byte_start + length - 1
                 headers["Content-Range"] = f"bytes {byte_start}-{end}/{full_length}"
@@ -107,7 +102,8 @@ class BaseResource(Resource):
         try:
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file)
-            mediafile_id = self.__get_mediafile_id(request)
+            if not (mediafile_id := request.args.get("id")) and not ticket:
+                raise NotFoundException("Provide either a mediafile ID or a ticket ID")
             jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key)

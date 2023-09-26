@@ -28,10 +28,6 @@ class S3StorageManager:
             aws_access_key_id=os.getenv("MINIO_ACCESS_KEY"),
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY"),
         )
-        self.bucket_name = os.getenv("MINIO_BUCKET")
-        self.bucket_prefix = os.getenv("MINIO_BUCKET_PREFIX")
-        self.bucket = self.s3.Bucket(self.bucket_name)
-        self.client = self.bucket.meta.client
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.storage_api_url = os.getenv("STORAGE_API_URL")
 
@@ -74,9 +70,6 @@ class S3StorageManager:
             if entry["key"] == key:
                 return entry["value"]
         return False
-
-    def __get_key_with_prefix(self, key):
-        return f"{self.bucket_prefix}{key}" if self.bucket_prefix else key
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -128,16 +121,19 @@ class S3StorageManager:
             headers=self.__get_auth_header(),
         )
 
-    def _get_mediafile(self, mediafile_id):
+    def _get_mediafile(self, mediafile_id, fatal=True):
         req = requests.get(
             f"{self.collection_api_url}/mediafiles/{mediafile_id}",
             headers=self.__get_auth_header(),
         )
-        if req.status_code == 404:
+        if req.status_code == 200:
+            return req.json()
+        elif not fatal:
+            return None
+        elif req.status_code == 404:
             raise NotFoundException("Could not get mediafile with provided id")
-        elif req.status_code != 200:
+        else:
             raise Exception("Something went wrong while getting mediafile")
-        return req.json()
 
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
@@ -149,8 +145,8 @@ class S3StorageManager:
         buf = io.BytesIO()
         img.save(buf, img.format, exif=exif)
         buf.seek(0)
-        self.bucket.upload_fileobj(
-            Fileobj=buf, Key=self.__get_key_with_prefix(mediafile["filename"])
+        self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(
+            Fileobj=buf, Key=self.__get_key(mediafile["filename"])
         )
         requests.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
@@ -158,33 +154,42 @@ class S3StorageManager:
             json={"exif": str(exif)},
         )
 
-    def check_file_exists(self, filename, md5sum):
-        objects = self.client.list_objects_v2(Bucket=self.bucket_name, Prefix=md5sum)
-        if len(objects.get("Contents", [])):
-            existing_file = objects.get("Contents", [])[0]["Key"]
-            error_message = (
-                f"Duplicate file {filename} matches existing file {existing_file}."
+    def check_file_exists(self, filename, md5sum, ticket=None):
+        bucket_name = self.__get_bucket_name(ticket)
+        client = self.s3.Bucket(bucket_name).meta.client
+        if ticket and client.head_object(Bucket=bucket_name, Key=ticket["location"]):
+            raise DuplicateFileException(
+                f'{ticket["location"]} already exists in {bucket_name}'
             )
-            raise DuplicateFileException(error_message, existing_file, md5sum)
+        else:
+            objects = client.list_objects_v2(Bucket=bucket_name, Prefix=md5sum)
+            if len(objects.get("Contents", [])):
+                existing_file = objects.get("Contents", [])[0]["Key"]
+                error_message = (
+                    f"Duplicate file {filename} matches existing file {existing_file}."
+                )
+                raise DuplicateFileException(error_message, existing_file, md5sum)
 
     def check_health(self):
-        return self.client.head_bucket(Bucket=self.bucket_name)
+        return self.s3.buckets.all()
 
     def delete_files(self, files):
         payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
-        self.bucket.delete_objects(Delete=payload)
+        self.s3.Bucket(self.__get_bucket_name()).delete_objects(Delete=payload)
 
-    def download_file(self, file_name, range=None):
+    def download_file(self, file_name, range=None, ticket=None):
+        bucket_name = self.__get_bucket_name(ticket)
+        client = self.s3.Bucket(bucket_name).meta.client
         try:
             if range:
-                file_obj = self.client.get_object(
-                    Bucket=self.bucket_name,
-                    Key=self.__get_key_with_prefix(file_name),
+                file_obj = client.get_object(
+                    Bucket=bucket_name,
+                    Key=self.__get_key(file_name, ticket=ticket),
                     Range=range,
                 )
             else:
-                file_obj = self.client.get_object(
-                    Bucket=self.bucket_name, Key=self.__get_key_with_prefix(file_name)
+                file_obj = client.get_object(
+                    Bucket=bucket_name, Key=self.__get_key(file_name, ticket=ticket)
                 )
         except ClientError:
             message = f"File {file_name} not found"
@@ -222,31 +227,50 @@ class S3StorageManager:
                 return True
         return len(unmatched) > 0
 
+    def __get_bucket_name(self, ticket=None):
+        if ticket:
+            return ticket["bucket"]
+        if bucket := os.getenv("MINIO_BUCKET"):
+            return bucket
+        raise Exception("No bucket for upload was specified")
+
+    def __get_key(self, key, md5sum=None, ticket=None):
+        if ticket:
+            return ticket["location"]
+        if md5sum:
+            return f"{md5sum}-{key}"
+        return key
+
     def upload_file(self, file, mediafile_id, key, ticket):
-        mediafile = self._get_mediafile(mediafile_id)
+        mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
         try:
-            self.check_file_exists(key, md5sum)
+            self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
-            self.__handle_duplicate_file(
-                mediafile, mimetype, ex.md5sum, ex.filename, ex.message
-            )
-        key = f"{md5sum}-{key}"
-        self.bucket.upload_fileobj(Fileobj=file, Key=self.__get_key_with_prefix(key))
-        self.__update_mediafile_information(mediafile, md5sum, key, mimetype)
-        self.__signal_file_uploaded(
-            mediafile,
-            mimetype,
-            f'{self.storage_api_url}{mediafile["original_file_location"]}',
+            if mediafile:
+                self.__handle_duplicate_file(
+                    mediafile, mimetype, ex.md5sum, ex.filename, ex.message
+                )
+        self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
+            Fileobj=file, Key=self.__get_key(key, md5sum, ticket)
         )
+        if mediafile:
+            self.__update_mediafile_information(mediafile, md5sum, key, mimetype)
+            self.__signal_file_uploaded(
+                mediafile,
+                mimetype,
+                f'{self.storage_api_url}{mediafile["original_file_location"]}',
+            )
 
     def upload_transcode(self, file, mediafile_id, key):
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         key = f"{md5sum}-transcode-{key}"
         self.check_file_exists(key, md5sum)
-        self.bucket.upload_fileobj(Fileobj=file, Key=self.__get_key_with_prefix(key))
+        self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(
+            Fileobj=file, Key=self.__get_key(key)
+        )
         mediafile["identifiers"].append(md5sum)
         data = {
             "identifiers": mediafile["identifiers"],
