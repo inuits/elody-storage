@@ -151,7 +151,12 @@ class S3StorageManager:
     def check_file_exists(self, filename, md5sum, ticket=None):
         bucket_name = self.__get_bucket_name(ticket)
         client = self.s3.Bucket(bucket_name).meta.client
-        if ticket and client.head_object(Bucket=bucket_name, Key=ticket["location"]):
+        if ticket:
+            try:
+                client.head_object(Bucket=bucket_name, Key=ticket["location"])
+            except ClientError as ex:
+                if ex.response["Error"]["Code"] == "404":
+                    return
             raise DuplicateFileException(
                 f'{ticket["location"]} already exists in {bucket_name}'
             )
