@@ -1,4 +1,6 @@
+import os
 import re
+import requests
 import shutil
 import tempfile
 
@@ -19,6 +21,17 @@ from werkzeug.datastructures import Headers
 class BaseResource(Resource):
     def __init__(self):
         self.storage = StorageManager().get_storage_engine()
+        self.collection_api_url = os.getenv("COLLECTION_API_URL")
+
+    def __get_auth_headers(self):
+        try:
+            tenant = policy_factory.get_user_context().x_tenant.id
+        except NoUserContextException:
+            tenant = request.headers.get("apikey")
+        if tenant:
+            return {"apikey": tenant}
+        else:
+            return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
     def __get_byte_range(self, range_header):
         g = re.search("(\d+)-(\d*)", range_header).groups()
@@ -47,6 +60,20 @@ class BaseResource(Resource):
         if getattr(file, "name", None):
             return file.name
         raise Exception("Could not determine filename for upload")
+
+    def _get_ticket(self, ticket_id):
+        if not ticket_id:
+            raise Exception("No ticket id given")
+        response = requests.get(
+            f"{self.collection_api_url}/ticket/{ticket_id}",
+            headers=self.__get_auth_headers(),
+        )
+        if response.status_code != 200:
+            raise NotFoundException(f"Ticket with id {ticket_id} not found")
+        ticket = response.json()
+        if ticket.get("is_expired", True):
+            raise Exception("Ticket is expired")
+        return ticket
 
     def _handle_file_download(self, key, ticket=None):
         chunk = False
@@ -105,10 +132,11 @@ class BaseResource(Resource):
             if not (mediafile_id := request.args.get("id")) and not ticket:
                 raise NotFoundException("Provide either a mediafile ID or a ticket ID")
             jobs_extension.progress_job(job, mediafile_id=mediafile_id)
+            headers = self.__get_auth_headers()
             if transcode:
-                self.storage.upload_transcode(file, mediafile_id, key)
+                self.storage.upload_transcode(headers, file, mediafile_id, key)
             else:
-                self.storage.upload_file(file, mediafile_id, key, ticket)
+                self.storage.upload_file(headers, file, mediafile_id, key, ticket)
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()
