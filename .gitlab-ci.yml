@@ -15,4 +15,4 @@ variables:
   APPLICATION: 'dams-storage'
   CUSTOMER: 'inuits'
 
-  TARGETS: 'coghent,digipolis-asset-engine,digipolis-dams,pza'
+  TARGETS: 'coghent,digipolis-dams,pza'
