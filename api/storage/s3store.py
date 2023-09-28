@@ -170,7 +170,8 @@ class S3StorageManager:
                 raise DuplicateFileException(error_message, existing_file, md5sum)
 
     def check_health(self):
-        return self.s3.buckets.all()
+        self.s3.buckets.all()
+        return True
 
     def delete_files(self, files):
         payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
