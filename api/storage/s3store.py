@@ -220,12 +220,14 @@ class S3StorageManager:
             return bucket
         raise Exception("No bucket for upload was specified")
 
-    def __get_key(self, key, md5sum=None, ticket=None):
-        if ticket:
-            return ticket["location"]
+    def __get_key(self, key, md5sum=None, ticket=None, transcode=False):
+        input_key = ticket["location"] if ticket else key
+        split_key = input_key.split("/")
+        if transcode:
+            split_key[-1] = f"transcode-{split_key[-1]}"
         if md5sum:
-            return f"{md5sum}-{key}"
-        return key
+            split_key[-1] = f"{md5sum}-{split_key[-1]}"
+        return "/".join(split_key)
 
     def upload_file(self, headers, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(headers, mediafile_id, fatal=ticket is None)
@@ -238,8 +240,9 @@ class S3StorageManager:
                 self.__handle_duplicate_file(
                     headers, mediafile, mimetype, ex.md5sum, ex.filename, ex.message
                 )
+        key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
-            Fileobj=file, Key=self.__get_key(key, md5sum, ticket)
+            Fileobj=file, Key=key
         )
         if mediafile:
             self.__update_mediafile_information(
@@ -254,11 +257,9 @@ class S3StorageManager:
     def upload_transcode(self, headers, file, mediafile_id, key):
         mediafile = self._get_mediafile(headers, mediafile_id)
         md5sum = self.__calculate_md5(file)
-        key = f"{md5sum}-transcode-{key}"
+        key = self.__get_key(key, md5sum=md5sum, transcode=True)
         self.check_file_exists(key, md5sum)
-        self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(
-            Fileobj=file, Key=self.__get_key(key)
-        )
+        self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(Fileobj=file, Key=key)
         mediafile["identifiers"].append(md5sum)
         data = {
             "identifiers": mediafile["identifiers"],
