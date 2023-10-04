@@ -102,6 +102,7 @@ class S3StorageManager:
     def __update_mediafile_information(
         self, headers, mediafile, md5sum, new_key, mimetype
     ):
+        new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["original_filename"] = mediafile["filename"]
         mediafile["filename"] = new_key
