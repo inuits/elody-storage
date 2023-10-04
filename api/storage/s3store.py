@@ -192,7 +192,7 @@ class S3StorageManager:
                     Bucket=bucket_name, Key=self.__get_key(file_name, ticket=ticket)
                 )
         except ClientError:
-            message = f"File {file_name} not found"
+            message = f"File {file_name} not found with key {self.__get_key(file_name, ticket=ticket)}"
             app.logger.error(message)
             raise FileNotFoundException(message)
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
