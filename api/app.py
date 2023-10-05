@@ -12,6 +12,7 @@ from healthcheck import HealthCheck
 from inuits_policy_based_auth.policy_factory import PolicyFactory
 from job_helper.job_extension import JobExtension
 from rabbitmq_pika_flask import RabbitMQ
+from rabbitmq_pika_flask.ExchangeParams import ExchangeParams
 from storage.storagemanager import StorageManager
 
 if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
@@ -43,7 +44,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-rabbit = RabbitMQ()
+rabbit = RabbitMQ(
+    exchange_params=ExchangeParams(
+        passive=os.getenv("PASSIVE_EXCHANGE", False)
+        in [
+            1,
+            "1",
+            "True",
+            "true",
+            True,
+        ],
+        durable=os.getenv("DURABLE_EXCHANGE", False)
+        in [
+            1,
+            "1",
+            "True",
+            "true",
+            True,
+        ],
+    )
+)
 rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 jobs_extension = JobExtension(rabbit)
