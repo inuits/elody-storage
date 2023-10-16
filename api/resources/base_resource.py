@@ -65,7 +65,7 @@ class BaseResource(Resource):
         if not ticket_id:
             raise Exception("No ticket id given")
         response = requests.get(
-            f"{self.collection_api_url}/ticket/{ticket_id}",
+            f"{self.collection_api_url}/tickets/{ticket_id}",
             headers=self.__get_auth_headers(),
         )
         if response.status_code != 200:
