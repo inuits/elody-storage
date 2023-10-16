@@ -134,7 +134,7 @@ class BaseResource(Resource):
             jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             headers = self.__get_auth_headers()
             if transcode:
-                self.storage.upload_transcode(headers, file, mediafile_id, key)
+                self.storage.upload_transcode(headers, file, mediafile_id, key, ticket)
             else:
                 self.storage.upload_file(headers, file, mediafile_id, key, ticket)
         except (DuplicateFileException, Exception) as ex:

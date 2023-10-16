@@ -253,20 +253,24 @@ class S3StorageManager:
                 mediafile,
                 mimetype,
                 f'{self.storage_api_url}{mediafile["original_file_location"]}',
+                headers,
             )
 
-    def upload_transcode(self, headers, file, mediafile_id, key):
+    def upload_transcode(self, headers, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(headers, mediafile_id)
         md5sum = self.__calculate_md5(file)
-        key = self.__get_key(key, md5sum=md5sum, transcode=True)
+        key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
         self.check_file_exists(key, md5sum)
-        self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(Fileobj=file, Key=key)
+        self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
+            Fileobj=file, Key=key
+        )
         mediafile["identifiers"].append(md5sum)
+        new_key = key.split("/")[-1]
         data = {
             "identifiers": mediafile["identifiers"],
             "transcode_filename": key,
-            "transcode_file_location": f"/download/{key}",
-            "thumbnail_file_location": f"/iiif/3/{key}/full/,150/0/default.jpg",
+            "transcode_file_location": f"/download/{new_key}",
+            "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
         }
         requests.patch(
             f"{self.collection_api_url}/mediafiles/{mediafile_id}",

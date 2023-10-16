@@ -37,4 +37,12 @@ class UploadKeyWithTicket(BaseResource):
 class UploadTranscode(BaseResource):
     @policy_factory.authenticate(RequestContext(request))
     def post(self):
-        return self._handle_file_upload(transcode=True)
+        try:
+            ticket_id = request.args.get("ticket_id")
+            if ticket_id:
+                ticket = self._get_ticket(ticket_id)
+                return self._handle_file_upload(transcode=True, ticket=ticket)
+            else:
+                return self._handle_file_upload(transcode=True)
+        except Exception as ex:
+            return str(ex), 400
