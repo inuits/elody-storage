@@ -93,9 +93,11 @@ class S3StorageManager:
             )
         raise DuplicateFileException(message)
 
-    def __signal_file_uploaded(self, mediafile, mimetype, url):
+    def __signal_file_uploaded(self, mediafile, mimetype, url, headers=None):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
         data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
+        if headers:
+            data["headers"] = headers
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
