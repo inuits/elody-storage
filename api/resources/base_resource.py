@@ -131,6 +131,8 @@ class BaseResource(Resource):
             key = self.__get_key_for_file(key, file)
             if not (mediafile_id := request.args.get("id")) and not ticket:
                 raise NotFoundException("Provide either a mediafile ID or a ticket ID")
+            if not mediafile_id and "mediafile_id" in ticket:
+                mediafile_id = ticket.get("mediafile_id")
             jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             headers = self.__get_auth_headers()
             if transcode:
