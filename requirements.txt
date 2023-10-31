@@ -1,13 +1,13 @@
 aniso8601==9.0.1
 Authlib==1.2.1
 blinker==1.6.3
-boto3==1.28.71
-botocore==1.31.71
+boto3==1.28.74
+botocore==1.31.74
 certifi==2023.7.22
 cffi==1.16.0
 charset-normalizer==3.3.1
 click==8.1.7
-cloudevents==1.10.0
+cloudevents==1.10.1
 cryptography==41.0.5
 decorator==5.1.1
 deprecation==2.1.0
@@ -19,7 +19,7 @@ flask-swagger-ui==4.11.1
 gunicorn==21.2.0
 humanfriendly==10.0
 idna==3.4
-inuits-policy-based-auth==9.2.0
+inuits-policy-based-auth==10.0.0
 itsdangerous==2.1.2
 Jinja2==3.1.2
 jmespath==1.0.1
