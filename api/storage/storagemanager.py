@@ -13,5 +13,7 @@ class StorageManager(metaclass=Singleton):
         if self.storage_engine == "s3":
             self.storage_manager = S3StorageManager()
 
-    def get_storage_engine(self):
+    def get_storage_engine(self, headers=None):
+        if headers:
+            self.storage_manager.set_headers(headers)
         return self.storage_manager

@@ -20,7 +20,8 @@ from werkzeug.datastructures import Headers
 
 class BaseResource(Resource):
     def __init__(self):
-        self.storage = StorageManager().get_storage_engine()
+        self.auth_headers = self.__get_auth_headers()
+        self.storage = StorageManager().get_storage_engine(self.auth_headers)
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
 
     def __get_auth_headers(self):
@@ -65,8 +66,7 @@ class BaseResource(Resource):
         if not ticket_id:
             raise Exception("No ticket id given")
         response = requests.get(
-            f"{self.collection_api_url}/tickets/{ticket_id}",
-            headers=self.__get_auth_headers(),
+            f"{self.collection_api_url}/tickets/{ticket_id}", headers=self.auth_headers
         )
         if response.status_code != 200:
             raise NotFoundException(f"Ticket with id {ticket_id} not found")
@@ -134,11 +134,10 @@ class BaseResource(Resource):
             if not mediafile_id and "mediafile_id" in ticket:
                 mediafile_id = ticket.get("mediafile_id")
             jobs_extension.progress_job(job, mediafile_id=mediafile_id)
-            headers = self.__get_auth_headers()
             if transcode:
-                self.storage.upload_transcode(headers, file, mediafile_id, key, ticket)
+                self.storage.upload_transcode(file, mediafile_id, key, ticket)
             else:
-                self.storage.upload_file(headers, file, mediafile_id, key, ticket)
+                self.storage.upload_file(file, mediafile_id, key, ticket)
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()

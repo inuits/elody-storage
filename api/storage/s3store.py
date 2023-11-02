@@ -29,6 +29,14 @@ class S3StorageManager:
         )
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.storage_api_url = os.getenv("STORAGE_API_URL")
+        self.headers = None
+        self.session = requests.Session()
+
+    def set_headers(self, headers):
+        self.headers = headers
+        self.session.headers.pop("Authorization", None)
+        self.session.headers.pop("apikey", None)
+        self.session.headers.update(headers)
 
     def __calculate_md5(self, file):
         hash_obj = hashlib.md5()
@@ -63,47 +71,39 @@ class S3StorageManager:
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
-    def __handle_duplicate_file(
-        self, headers, mediafile, mimetype, md5sum, filename, message
-    ):
+    def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
         try:
-            found_mediafile = self._get_mediafile(headers, md5sum)
+            found_mediafile = self._get_mediafile(md5sum)
         except NotFoundException:
-            self.__update_mediafile_information(
-                headers, mediafile, md5sum, filename, mimetype
-            )
+            self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
             raise DuplicateFileException(message)
         mediafile_id = self.__get_raw_id(mediafile)
         if self.__get_raw_id(found_mediafile) != mediafile_id:
-            requests.delete(
-                f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-                headers=headers,
-            )
+            self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
             message = f"{message} Existing mediafile for file found, deleting new one."
         if self.is_metadata_updated(found_mediafile, mediafile):
             message = f"{message} Metadata not up-to-date, updating."
             payload = {"metadata": mediafile.get("metadata", [])}
-            requests.patch(
-                f"{self.collection_api_url}/mediafiles/{md5sum}",
-                headers=headers,
-                json=payload,
+            self.session.patch(
+                f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
             )
         raise DuplicateFileException(message)
 
-    def __signal_file_uploaded(self, mediafile, mimetype, url, headers=None):
+    def __signal_file_uploaded(self, mediafile, mimetype, url, headers):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
-        data = {"mediafile": mediafile, "mimetype": mimetype, "url": url}
-        if headers:
-            data["headers"] = headers
+        data = {
+            "mediafile": mediafile,
+            "mimetype": mimetype,
+            "url": url,
+            "headers": headers,
+        }
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
-    def __update_mediafile_information(
-        self, headers, mediafile, md5sum, new_key, mimetype
-    ):
+    def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["original_filename"] = mediafile["filename"]
@@ -113,16 +113,13 @@ class S3StorageManager:
             "thumbnail_file_location"
         ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
         mediafile["mimetype"] = mimetype
-        requests.put(
+        self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
-            headers=headers,
         )
 
-    def _get_mediafile(self, headers, mediafile_id, fatal=True):
-        req = requests.get(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}", headers=headers
-        )
+    def _get_mediafile(self, mediafile_id, fatal=True):
+        req = self.session.get(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
         if req.status_code == 200:
             return req.json()
         elif not fatal:
@@ -132,7 +129,7 @@ class S3StorageManager:
         else:
             raise Exception("Something went wrong while getting mediafile")
 
-    def add_exif_data(self, headers, mediafile):
+    def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
             return
         image = self.download_file(mediafile["filename"])["stream"]
@@ -145,9 +142,8 @@ class S3StorageManager:
         self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(
             Fileobj=buf, Key=self.__get_key(mediafile["filename"])
         )
-        requests.patch(
+        self.session.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
-            headers=headers,
             json={"exif": str(exif)},
         )
 
@@ -232,8 +228,8 @@ class S3StorageManager:
             split_key[-1] = f"{md5sum}-{split_key[-1]}"
         return "/".join(split_key)
 
-    def upload_file(self, headers, file, mediafile_id, key, ticket):
-        mediafile = self._get_mediafile(headers, mediafile_id, fatal=ticket is None)
+    def upload_file(self, file, mediafile_id, key, ticket):
+        mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
         try:
@@ -241,25 +237,23 @@ class S3StorageManager:
         except DuplicateFileException as ex:
             if mediafile:
                 self.__handle_duplicate_file(
-                    headers, mediafile, mimetype, ex.md5sum, ex.filename, ex.message
+                    mediafile, mimetype, ex.md5sum, ex.filename, ex.message
                 )
         key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
             Fileobj=file, Key=key
         )
         if mediafile:
-            self.__update_mediafile_information(
-                headers, mediafile, md5sum, key, mimetype
-            )
+            self.__update_mediafile_information(mediafile, md5sum, key, mimetype)
             self.__signal_file_uploaded(
                 mediafile,
                 mimetype,
                 f'{self.storage_api_url}{mediafile["original_file_location"]}',
-                headers,
+                self.headers,
             )
 
-    def upload_transcode(self, headers, file, mediafile_id, key, ticket):
-        mediafile = self._get_mediafile(headers, mediafile_id)
+    def upload_transcode(self, file, mediafile_id, key, ticket):
+        mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
         self.check_file_exists(key, md5sum)
@@ -274,8 +268,6 @@ class S3StorageManager:
             "transcode_file_location": f"/download/{new_key}",
             "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
         }
-        requests.patch(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-            headers=headers,
-            json=data,
+        self.session.patch(
+            f"{self.collection_api_url}/mediafiles/{mediafile_id}", json=data
         )
