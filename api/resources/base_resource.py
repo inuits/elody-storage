@@ -30,7 +30,10 @@ class BaseResource(Resource):
         except NoUserContextException:
             tenant = request.headers.get("apikey")
         if tenant:
-            return {"apikey": tenant}
+            return {
+                "Authorization": f'Bearer {os.getenv("STATIC_JWT")}',
+                "apikey": tenant,
+            }
         else:
             return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
