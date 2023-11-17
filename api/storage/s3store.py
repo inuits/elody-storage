@@ -111,7 +111,7 @@ class S3StorageManager:
         mediafile["original_file_location"] = f"/download/{new_key}"
         mediafile[
             "thumbnail_file_location"
-        ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
+        ] = f"/iiif/3/{new_key}/square/100,/0/default.jpg"
         mediafile["mimetype"] = mimetype
         self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
@@ -266,7 +266,7 @@ class S3StorageManager:
             "identifiers": mediafile["identifiers"],
             "transcode_filename": key,
             "transcode_file_location": f"/download/{new_key}",
-            "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+            "thumbnail_file_location": f"/iiif/3/{new_key}/square/100,/0/default.jpg",
         }
         self.session.patch(
             f"{self.collection_api_url}/mediafiles/{mediafile_id}", json=data
