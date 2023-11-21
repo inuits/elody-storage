@@ -1,8 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "pip": {
-    "fileMatch": ["^requirements(_dev)?\\.txt$"],
-    "pinDigests": true
+  "pip_requirements": {
+    "fileMatch": ["^requirements(_dev)?\\.txt$"]
   }
 }
