@@ -98,13 +98,10 @@ try:
 except ModuleNotFoundError:
     load_policies(policy_factory, logger)
 
-from resources.download import Download, DownloadWithTicket
+from resources.download import Download
 from resources.unique import Unique
 from resources.upload import (
     Upload,
-    UploadWithTicket,
-    UploadKey,
-    UploadKeyWithTicket,
     UploadTranscode,
 )
 from resources.spec import AsyncAPISpec, OpenAPISpec
@@ -116,15 +113,11 @@ if os.getenv("ENABLE_DELETE"):
     api.add_resource(Delete, "/delete/<string:key>")
     api.add_resource(DeleteMultiple, "/delete")
 
-api.add_resource(Download, "/download/<string:key>")
-api.add_resource(DownloadWithTicket, "/download-with-ticket/<string:key>")
+api.add_resource(Download, "/download/<string:ticket_id>")
 
 api.add_resource(Unique, "/unique/<string:md5sum>")
 
-api.add_resource(Upload, "/upload")
-api.add_resource(UploadWithTicket, "/upload-with-ticket")
-api.add_resource(UploadKey, "/upload/<string:key>")
-api.add_resource(UploadKeyWithTicket, "/upload-with-ticket/<string:key>")
+api.add_resource(Upload, "/upload/<string:ticket_id>")
 api.add_resource(UploadTranscode, "/upload/transcode")
 
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")

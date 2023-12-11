@@ -6,32 +6,12 @@ from resources.base_resource import BaseResource
 
 class Upload(BaseResource):
     @policy_factory.authenticate(RequestContext(request))
-    def post(self):
-        return self._handle_file_upload()
-
-
-class UploadWithTicket(BaseResource):
-    def post(self):
+    def post(self, ticket_id):
         try:
-            ticket = self._get_ticket(request.args.get("ticket_id"))
+            ticket = self._get_ticket(ticket_id)
         except Exception as ex:
             return str(ex), 400
         return self._handle_file_upload(ticket=ticket)
-
-
-class UploadKey(BaseResource):
-    @policy_factory.authenticate(RequestContext(request))
-    def post(self, key):
-        return self._handle_file_upload(key=key)
-
-
-class UploadKeyWithTicket(BaseResource):
-    def post(self, key):
-        try:
-            ticket = self._get_ticket(request.args.get("ticket_id"))
-        except Exception as ex:
-            return str(ex), 400
-        return self._handle_file_upload(key=key, ticket=ticket)
 
 
 class UploadTranscode(BaseResource):
