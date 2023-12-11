@@ -104,9 +104,14 @@ class S3StorageManager:
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
-        new_key = new_key.split("/")[-1]
-        mediafile["identifiers"].append(md5sum)
-        mediafile["original_filename"] = mediafile["filename"]
+        if "md5sum" not in mediafile["metadata"]:
+            mediafile["metadata"].append({"key": "md5sum", "value": md5sum})
+            mediafile["identifiers"].append(md5sum)
+        if new_key not in mediafile["identifiers"]:
+            mediafile["identifiers"].append(new_key)
+        if "original_filename" not in mediafile:
+            mediafile["metadata"].append({"key": "title", "value": mediafile["filename"]})
+            mediafile["original_filename"] = mediafile["filename"]
         mediafile["filename"] = new_key
         mediafile["original_file_location"] = f"/download/{new_key}"
         mediafile[
@@ -146,27 +151,11 @@ class S3StorageManager:
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
             json={"exif": str(exif)},
         )
-
-    def check_file_exists(self, filename, md5sum, ticket=None):
-        bucket_name = self.__get_bucket_name(ticket)
-        client = self.s3.Bucket(bucket_name).meta.client
-        if ticket:
-            try:
-                client.head_object(Bucket=bucket_name, Key=ticket["location"])
-            except ClientError as ex:
-                if ex.response["Error"]["Code"] == "404":
-                    return
-            raise DuplicateFileException(
-                f'{ticket["location"]} already exists in {bucket_name}'
-            )
-        else:
-            objects = client.list_objects_v2(Bucket=bucket_name, Prefix=md5sum)
-            if len(objects.get("Contents", [])):
-                existing_file = objects.get("Contents", [])[0]["Key"]
-                error_message = (
-                    f"Duplicate file {filename} matches existing file {existing_file}."
-                )
-                raise DuplicateFileException(error_message, existing_file, md5sum)
+        
+    def check_file_exists(self, collection, md5sum):
+        req = self.session.get(f"{self.collection_api_url}/unique/{collection}/{md5sum}")
+        if req.status_code != 200:
+            raise DuplicateFileException(req.json())
 
     def check_health(self):
         self.s3.buckets.all()
@@ -188,10 +177,10 @@ class S3StorageManager:
                 )
             else:
                 file_obj = client.get_object(
-                    Bucket=bucket_name, Key=self.__get_key(file_name, ticket=ticket)
+                    Bucket=bucket_name, Key=self.__get_key(ticket=ticket)
                 )
         except ClientError:
-            message = f"File {file_name} not found with key {self.__get_key(file_name, ticket=ticket)}"
+            message = f"File {file_name} not found with key {self.__get_key(ticket=ticket)}"
             app.logger.error(message)
             raise FileNotFoundException(message)
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
@@ -231,27 +220,25 @@ class S3StorageManager:
             return bucket
         raise Exception("No bucket for upload was specified")
 
-    def __get_key(self, key, md5sum=None, ticket=None, transcode=False):
-        input_key = ticket["location"] if ticket else key
+    def __get_key(self, ticket, transcode=False):
+        input_key = ticket["location"]
         split_key = input_key.split("/")
         if transcode:
             split_key[-1] = f"transcode-{split_key[-1]}"
-        if md5sum:
-            split_key[-1] = f"{md5sum}-{split_key[-1]}"
         return "/".join(split_key)
 
     def upload_file(self, file, mediafile_id, key, ticket):
-        mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
+        mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
         try:
-            self.check_file_exists(key, md5sum, ticket)
+            self.check_file_exists("mediafiles", md5sum)
         except DuplicateFileException as ex:
             if mediafile:
                 self.__handle_duplicate_file(
                     mediafile, mimetype, ex.md5sum, ex.filename, ex.message
                 )
-        key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
+        key = self.__get_key(ticket)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
             Fileobj=file, Key=key
         )
@@ -268,7 +255,7 @@ class S3StorageManager:
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
-        self.check_file_exists(key, md5sum)
+        self.check_file_exists("mediafiles", md5sum)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
             Fileobj=file, Key=key
         )
