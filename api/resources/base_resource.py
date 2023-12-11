@@ -79,13 +79,13 @@ class BaseResource(Resource):
             raise Exception("Ticket is expired")
         return ticket
 
-    def _handle_file_download(self, key, ticket=None):
+    def _handle_file_download(self, ticket):
         chunk = False
         try:
-            file_object = self.storage.download_file(key, ticket=ticket)
+            file_object = self.storage.download_file(ticket.get("mediafile_id"), ticket=ticket)
         except FileNotFoundException as ex:
             abort(404, message=str(ex))
-        content_type = get_mimetype_from_filename(key)
+        content_type = get_mimetype_from_filename(ticket.get("mediafile_id"))
         full_length = file_object["content_length"]
         headers = Headers()
         headers["Accept-Ranges"] = "bytes"
@@ -96,7 +96,7 @@ class BaseResource(Resource):
             if byte_end:
                 chunk = True
                 file_object = self.storage.download_file(
-                    key, f"bytes={byte_start}-{byte_end}", ticket
+                    ticket.get("mediafile_id"), f"bytes={byte_start}-{byte_end}", ticket
                 )
                 end = byte_start + length - 1
                 headers["Content-Range"] = f"bytes {byte_start}-{end}/{full_length}"
@@ -118,7 +118,7 @@ class BaseResource(Resource):
         )
         return response
 
-    def _handle_file_upload(self, key=None, transcode=False, ticket=None):
+    def _handle_file_upload(self, ticket, key=None, transcode=False):
         try:
             user = policy_factory.get_user_context().email or "default_uploader"
         except NoUserContextException:
