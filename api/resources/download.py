@@ -5,7 +5,6 @@ from resources.base_resource import BaseResource
 
 
 class Download(BaseResource):
-    @policy_factory.authenticate(RequestContext(request))
     def get(self, ticket_id):
         try:
             ticket = self._get_ticket(ticket_id)
