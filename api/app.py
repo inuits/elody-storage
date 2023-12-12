@@ -118,7 +118,7 @@ api.add_resource(Download, "/download/<string:ticket_id>")
 api.add_resource(Unique, "/unique/<string:md5sum>")
 
 api.add_resource(Upload, "/upload/<string:ticket_id>")
-api.add_resource(UploadTranscode, "/upload/transcode")
+api.add_resource(UploadTranscode, "/upload/transcode/<string:ticket_id>")
 
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")

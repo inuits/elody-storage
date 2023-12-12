@@ -5,7 +5,6 @@ from resources.base_resource import BaseResource
 
 
 class Upload(BaseResource):
-    @policy_factory.authenticate(RequestContext(request))
     def post(self, ticket_id):
         try:
             ticket = self._get_ticket(ticket_id)
@@ -15,14 +14,9 @@ class Upload(BaseResource):
 
 
 class UploadTranscode(BaseResource):
-    @policy_factory.authenticate(RequestContext(request))
-    def post(self):
+    def post(self, ticket_id):
         try:
-            ticket_id = request.args.get("ticket_id")
-            if ticket_id:
-                ticket = self._get_ticket(ticket_id)
-                return self._handle_file_upload(transcode=True, ticket=ticket)
-            else:
-                return self._handle_file_upload(transcode=True)
+            ticket = self._get_ticket(ticket_id)
         except Exception as ex:
             return str(ex), 400
+        return self._handle_file_upload(transcode=True, ticket=ticket)
