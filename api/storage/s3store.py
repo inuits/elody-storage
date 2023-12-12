@@ -172,7 +172,7 @@ class S3StorageManager:
             if range:
                 file_obj = client.get_object(
                     Bucket=bucket_name,
-                    Key=self.__get_key(file_name, ticket=ticket),
+                    Key=self.__get_key(ticket=ticket),
                     Range=range,
                 )
             else:
@@ -254,15 +254,20 @@ class S3StorageManager:
     def upload_transcode(self, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
-        key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
+        key = self.__get_key(transcode=True, ticket=ticket)
         self.check_file_exists("mediafiles", md5sum)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
             Fileobj=file, Key=key
         )
-        mediafile["identifiers"].append(md5sum)
+        if md5sum not in mediafile["identifiers"]:
+            mediafile["identifiers"].append(md5sum)
         new_key = key.split("/")[-1]
+        if new_key not in mediafile["identifiers"]:
+            mediafile["identifiers"].append(new_key)
         data = {
-            "filename": key,
+            "filename": new_key,
+            "identifiers": mediafile["identifiers"],
+            "transcode_filename": key,
             "transcode_file_location": f"/download/{new_key}",
             "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
         }
