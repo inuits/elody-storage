@@ -109,9 +109,9 @@ class S3StorageManager:
             mediafile["identifiers"].append(md5sum)
         if new_key not in mediafile["identifiers"]:
             mediafile["identifiers"].append(new_key)
-        if "original_filename" not in mediafile:
+        if "original_identifier" not in mediafile:
             mediafile["metadata"].append({"key": "title", "value": mediafile["identifier"]})
-            mediafile["original_filename"] = mediafile["identifier"]
+            mediafile["original_identifier"] = mediafile["identifier"]
         mediafile["identifier"] = new_key
         mediafile["mimetype"] = mimetype
         self.session.put(
