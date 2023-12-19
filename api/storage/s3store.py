@@ -110,9 +110,9 @@ class S3StorageManager:
         if new_key not in mediafile["identifiers"]:
             mediafile["identifiers"].append(new_key)
         if "original_filename" not in mediafile:
-            mediafile["metadata"].append({"key": "title", "value": mediafile["filename"]})
-            mediafile["original_filename"] = mediafile["filename"]
-        mediafile["filename"] = new_key
+            mediafile["metadata"].append({"key": "title", "value": mediafile["identifier"]})
+            mediafile["original_filename"] = mediafile["identifier"]
+        mediafile["identifier"] = new_key
         mediafile["mimetype"] = mimetype
         self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
