@@ -33,7 +33,7 @@ def remove_infected_file_from_storage(routing_key, body, message_id):
     if __is_malformed_message(data, ["mediafile_id", "clamav_version", "infected"]):
         return
     if data["infected"]:
-        StorageManager().get_storage_engine().delete_files([data["filename"]])
+        StorageManager().get_storage_engine().delete_files([data["identifier"]])
 
 
 @rabbit.queue("dams.mediafile_deleted")
@@ -41,9 +41,9 @@ def remove_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile", "linked_entities"]):
         return
-    files = [data["mediafile"]["filename"]]
-    if "transcode_filename" in data["mediafile"]:
-        files.append(data["mediafile"]["transcode_filename"])
+    files = [data["mediafile"]["identifier"]]
+    if "transcode_identifier" in data["mediafile"]:
+        files.append(data["mediafile"]["transcode_identifier"])
     try:
         StorageManager().get_storage_engine().delete_files(files)
     except Exception as ex:
