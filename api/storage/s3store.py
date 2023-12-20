@@ -71,11 +71,11 @@ class S3StorageManager:
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
-    def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
+    def __handle_duplicate_file(self, mediafile, mimetype, md5sum, identifier, message):
         try:
             found_mediafile = self._get_mediafile(md5sum)
         except NotFoundException:
-            self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
+            self.__update_mediafile_information(mediafile, md5sum, identifier, mimetype)
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
@@ -110,7 +110,9 @@ class S3StorageManager:
         if new_key not in mediafile["identifiers"]:
             mediafile["identifiers"].append(new_key)
         if "original_identifier" not in mediafile:
-            mediafile["metadata"].append({"key": "title", "value": mediafile["identifier"]})
+            mediafile["metadata"].append(
+                {"key": "title", "value": mediafile["identifier"]}
+            )
             mediafile["original_identifier"] = mediafile["identifier"]
         mediafile["identifier"] = new_key
         mediafile["mimetype"] = mimetype
@@ -130,10 +132,10 @@ class S3StorageManager:
         else:
             raise Exception("Something went wrong while getting mediafile")
 
-    def add_exif_data(self, mediafile):
+    def add_exif_data(self, mediafile, ticket):
         if "image" not in mediafile["mimetype"]:
             return
-        image = self.download_file(mediafile["filename"])["stream"]
+        image = self.download_file(mediafile["identifier"])["stream"]
         img = Image.open(image)
         exif = img.getexif()
         exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(mediafile)
@@ -141,15 +143,17 @@ class S3StorageManager:
         img.save(buf, img.format, exif=exif)
         buf.seek(0)
         self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(
-            Fileobj=buf, Key=self.__get_key(mediafile["filename"])
+            Fileobj=buf, Key=self.__get_key(ticket)
         )
         self.session.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
             json={"exif": str(exif)},
         )
-        
+
     def check_file_exists(self, collection, md5sum):
-        req = self.session.get(f"{self.collection_api_url}/unique/{collection}/{md5sum}")
+        req = self.session.get(
+            f"{self.collection_api_url}/unique/{collection}/{md5sum}"
+        )
         if req.status_code != 200:
             raise DuplicateFileException(req.json())
 
@@ -161,7 +165,7 @@ class S3StorageManager:
         payload = {"Objects": [{"Key": file} for file in files], "Quiet": True}
         self.s3.Bucket(self.__get_bucket_name()).delete_objects(Delete=payload)
 
-    def download_file(self, file_name, range=None, ticket=None):
+    def download_file(self, identifier, range=None, ticket=None):
         bucket_name = self.__get_bucket_name(ticket)
         client = self.s3.Bucket(bucket_name).meta.client
         try:
@@ -176,7 +180,9 @@ class S3StorageManager:
                     Bucket=bucket_name, Key=self.__get_key(ticket=ticket)
                 )
         except ClientError:
-            message = f"File {file_name} not found with key {self.__get_key(ticket=ticket)}"
+            message = (
+                f"File {identifier} not found with key {self.__get_key(ticket=ticket)}"
+            )
             app.logger.error(message)
             raise FileNotFoundException(message)
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
@@ -232,7 +238,7 @@ class S3StorageManager:
         except DuplicateFileException as ex:
             if mediafile:
                 self.__handle_duplicate_file(
-                    mediafile, mimetype, ex.md5sum, ex.filename, ex.message
+                    mediafile, mimetype, ex.md5sum, ex.identifier, ex.message
                 )
         key = self.__get_key(ticket)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
@@ -243,7 +249,7 @@ class S3StorageManager:
             self.__signal_file_uploaded(
                 mediafile,
                 mimetype,
-                f'{self.storage_api_url}/download/{self.__get_raw_id(ticket)}',
+                f"{self.storage_api_url}/download/{self.__get_raw_id(ticket)}",
                 self.headers,
             )
 
@@ -261,11 +267,9 @@ class S3StorageManager:
         if new_key not in mediafile["identifiers"]:
             mediafile["identifiers"].append(new_key)
         data = {
-            "filename": new_key,
+            "identifier": new_key,
             "identifiers": mediafile["identifiers"],
-            "transcode_filename": key,
-            "transcode_file_location": f"/download/{new_key}",
-            "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+            "transcode_identifier": key,
         }
         try:
             self.session.post(
