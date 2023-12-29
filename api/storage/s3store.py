@@ -104,7 +104,7 @@ class S3StorageManager:
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
-        if "md5sum" not in mediafile["metadata"]:
+        if all(item.get("key") != "md5sum" for item in mediafile["metadata"]):
             mediafile["metadata"].append({"key": "md5sum", "value": md5sum})
             mediafile["identifiers"].append(md5sum)
         if new_key not in mediafile["identifiers"]:
