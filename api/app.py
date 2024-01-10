@@ -99,7 +99,6 @@ except ModuleNotFoundError:
     load_policies(policy_factory, logger)
 
 from resources.download import Download
-from resources.unique import Unique
 from resources.upload import (
     Upload,
     UploadTranscode,
@@ -114,8 +113,6 @@ if os.getenv("ENABLE_DELETE"):
     api.add_resource(DeleteMultiple, "/delete")
 
 api.add_resource(Download, "/download/<string:ticket_id>")
-
-api.add_resource(Unique, "/unique/<string:md5sum>")
 
 api.add_resource(Upload, "/upload/<string:ticket_id>")
 api.add_resource(UploadTranscode, "/upload/transcode/<string:ticket_id>")
