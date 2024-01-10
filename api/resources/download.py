@@ -8,3 +8,5 @@ class Download(BaseResource):
         except Exception as ex:
             return str(ex), 400
         return self._handle_file_download(ticket)
+
+    
