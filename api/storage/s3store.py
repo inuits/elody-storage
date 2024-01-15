@@ -14,7 +14,7 @@ from elody.exceptions import (
     FileNotFoundException,
     NotFoundException,
 )
-from elody.util import get_mimetype_from_filename
+from elody.util import get_mimetype_from_filename, __get_item_metadata_value
 from humanfriendly import parse_size
 from PIL import Image
 
@@ -104,7 +104,7 @@ class S3StorageManager:
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
-        if all(item.get("key") != "md5sum" for item in mediafile["metadata"]):
+        if __get_item_metadata_value(mediafile, "md5sum"):
             mediafile["metadata"].append({"key": "md5sum", "value": md5sum})
             mediafile["identifiers"].append(md5sum)
         if new_key not in mediafile["identifiers"]:
