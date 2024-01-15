@@ -118,7 +118,8 @@ class BaseResource(Resource):
         )
         return response
 
-    def _handle_file_upload(self, ticket, key=None, transcode=False):
+    def _handle_file_upload(self, ticket, key=None):
+        transcode = ticket.get("transcode", False)
         try:
             user = policy_factory.get_user_context().email or "default_uploader"
         except NoUserContextException:

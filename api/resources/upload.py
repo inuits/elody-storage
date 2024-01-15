@@ -7,13 +7,4 @@ class Upload(BaseResource):
             ticket = self._get_ticket(ticket_id)
         except Exception as ex:
             return str(ex), 400
-        return self._handle_file_upload(ticket=ticket)
-
-
-class UploadTranscode(BaseResource):
-    def post(self, ticket_id):
-        try:
-            ticket = self._get_ticket(ticket_id)
-        except Exception as ex:
-            return str(ex), 400
-        return self._handle_file_upload(transcode=True, ticket=ticket)
+        return self._handle_file_upload(ticket)

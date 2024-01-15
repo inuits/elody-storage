@@ -99,10 +99,7 @@ except ModuleNotFoundError:
     load_policies(policy_factory, logger)
 
 from resources.download import Download
-from resources.upload import (
-    Upload,
-    UploadTranscode,
-)
+from resources.upload import Upload
 from resources.spec import AsyncAPISpec, OpenAPISpec
 import resources.queues
 
@@ -115,7 +112,6 @@ if os.getenv("ENABLE_DELETE"):
 api.add_resource(Download, "/download/<string:ticket_id>")
 
 api.add_resource(Upload, "/upload/<string:ticket_id>")
-api.add_resource(UploadTranscode, "/upload/transcode/<string:ticket_id>")
 
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
