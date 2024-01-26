@@ -1,4 +1,4 @@
-coverage==7.4.0
+coverage==7.4.1
 iniconfig==2.0.0
 moto==4.2.13
 pluggy==1.4.0
