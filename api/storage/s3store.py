@@ -114,6 +114,7 @@ class S3StorageManager:
             "thumbnail_file_location"
         ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
         mediafile["mimetype"] = mimetype
+        app.logger.info(f"The updated mediafile: {mediafile}")
         req = self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
