@@ -104,6 +104,7 @@ class S3StorageManager:
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
+        app.logger.info(f"Updating mediafile {self.__get_raw_id(mediafile)} with new key {new_key}")
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["original_filename"] = mediafile["filename"]
@@ -113,10 +114,11 @@ class S3StorageManager:
             "thumbnail_file_location"
         ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
         mediafile["mimetype"] = mimetype
-        self.session.put(
+        req = self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
         )
+        app.logger.info(f"Collection-api responded with {req.status_code} and {req.text}")
 
     def _get_mediafile(self, mediafile_id, fatal=True):
         req = self.session.get(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
@@ -229,9 +231,13 @@ class S3StorageManager:
         return "/".join(split_key)
 
     def upload_file(self, file, mediafile_id, key, ticket):
+        app.logger.info(f"Upload ticket: {ticket}")
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
+        app.logger.info(f"Mediafile to be uploaded: {mediafile}")
         md5sum = self.__calculate_md5(file)
+        app.logger.info(f"md5sum of that mediafile: {md5sum}")
         mimetype = self.__get_file_mimetype(file, key)
+        app.logger.info(f"mimetype of that mediafile: {mimetype}")
         try:
             self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
