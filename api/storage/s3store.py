@@ -270,11 +270,14 @@ class S3StorageManager:
         mediafile["identifiers"].append(md5sum)
         new_key = key.split("/")[-1]
         data = {
-            "identifiers": mediafile["identifiers"],
-            "transcode_filename": key,
+            "filename": key,
             "transcode_file_location": f"/download/{new_key}",
             "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
         }
-        self.session.patch(
-            f"{self.collection_api_url}/mediafiles/{mediafile_id}", json=data
-        )
+        try:
+            self.session.post(
+                f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
+                json=data,
+            )
+        except Exception as ex:
+            raise Exception(str(ex))
