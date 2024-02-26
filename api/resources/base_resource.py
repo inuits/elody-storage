@@ -65,12 +65,13 @@ class BaseResource(Resource):
             return file.name
         raise Exception("Could not determine filename for upload")
 
-    def _get_ticket(self, ticket_id):
+    def _get_ticket(self, ticket_id, api_key_hash=None):
         if not ticket_id:
             raise Exception("No ticket id given")
-        response = requests.get(
-            f"{self.collection_api_url}/tickets/{ticket_id}", headers=self.auth_headers
-        )
+        request_url = f"{self.collection_api_url}/tickets/{ticket_id}"
+        if api_key_hash:
+            request_url = f"{request_url}?api_key_hash={api_key_hash}"
+        response = requests.get(request_url, headers=self.auth_headers)
         if response.status_code != 200:
             raise NotFoundException(f"Ticket with id {ticket_id} not found")
         ticket = response.json()

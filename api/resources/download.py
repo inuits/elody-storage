@@ -13,7 +13,9 @@ class Download(BaseResource):
 class DownloadWithTicket(BaseResource):
     def get(self, key):
         try:
-            ticket = self._get_ticket(request.args.get("ticket_id"))
+            ticket = self._get_ticket(
+                request.args.get("ticket_id"), request.args.get("api_key_hash")
+            )
         except Exception as ex:
             return str(ex), 400
         return self._handle_file_download(key, ticket=ticket)
