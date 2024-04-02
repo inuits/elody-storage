@@ -14,7 +14,7 @@ from elody.exceptions import (
     FileNotFoundException,
     NotFoundException,
 )
-from elody.util import get_mimetype_from_filename, __get_item_metadata_value
+from elody.util import get_mimetype_from_filename, get_item_metadata_value
 from humanfriendly import parse_size
 from PIL import Image
 
@@ -46,11 +46,11 @@ class S3StorageManager:
         return hash_obj.hexdigest()
 
     def __get_exif_for_mediafile(self, mediafile):
-        artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
-        if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
+        artist = f'source: {get_item_metadata_value(mediafile, "source")}'
+        if photographer := get_item_metadata_value(mediafile, "photographer"):
             artist = f"photographer: {photographer}, {artist}"
-        rights = f'license: {self.__get_item_metadata_value(mediafile, "rights")}'
-        if copyrights := self.__get_item_metadata_value(mediafile, "copyright"):
+        rights = f'license: {get_item_metadata_value(mediafile, "rights")}'
+        if copyrights := get_item_metadata_value(mediafile, "copyright"):
             rights = f"rightsholder: {copyrights}, {rights}"
         return artist, rights
 
@@ -61,12 +61,6 @@ class S3StorageManager:
         if mime == "application/octet-stream":
             mime = get_mimetype_from_filename(key)
         return mime
-
-    def __get_item_metadata_value(self, item, key):
-        for entry in item["metadata"]:
-            if entry["key"] == key:
-                return entry["value"]
-        return False
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -104,7 +98,7 @@ class S3StorageManager:
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
-        if __get_item_metadata_value(mediafile, "md5sum"):
+        if get_item_metadata_value(mediafile, "md5sum"):
             mediafile["metadata"].append({"key": "md5sum", "value": md5sum})
             mediafile["identifiers"].append(md5sum)
         if new_key not in mediafile["identifiers"]:
