@@ -104,6 +104,8 @@ class S3StorageManager:
         if new_key not in mediafile["identifiers"]:
             mediafile["identifiers"].append(new_key)
         if "original_identifier" not in mediafile:
+            if mediafile.get("metadata") is None:
+                mediafile["metadata"] = []
             mediafile["metadata"].append(
                 {"key": "title", "value": mediafile["identifier"]}
             )
