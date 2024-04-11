@@ -3,6 +3,8 @@ import re
 import requests
 import shutil
 import tempfile
+import time
+import app
 
 from app import jobs_extension, policy_factory
 from elody.exceptions import (
@@ -80,9 +82,11 @@ class BaseResource(Resource):
         return ticket
 
     def _handle_file_download(self, key, ticket=None):
+        start_time = time.time()
         chunk = False
         try:
             file_object = self.storage.download_file(key, ticket=ticket)
+            app.logger.info(f"Downloading file took {time.time() - start_time}s")
         except FileNotFoundException as ex:
             abort(404, message=str(ex))
         content_type = get_mimetype_from_filename(key)
@@ -106,6 +110,7 @@ class BaseResource(Resource):
                 headers["Content-Length"] = file_object["content_length"]
                 if byte_end == 1:
                     headers["Content-Length"] = "1"
+        start_time = time.time()
         response = Response(
             stream_with_context(
                 self.storage.get_stream_generator(file_object["stream"])
@@ -116,6 +121,7 @@ class BaseResource(Resource):
             status=206 if chunk else 200,
             direct_passthrough=chunk,
         )
+        app.logger.info(f"Generating response took {time.time() - start_time}s")
         return response
 
     def _handle_file_upload(self, key=None, transcode=False, ticket=None):
