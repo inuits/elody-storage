@@ -14,14 +14,7 @@ class Download(BaseResource):
 class DownloadWithTicket(BaseResource):
     def head(self, key):
         headers = dict()
-        try:
-            start_time = time.time()
-            ticket = self._get_ticket(
-                request.args.get("ticket_id"), request.args.get("api_key_hash")
-            )
-        except Exception as ex:
-            return str(ex), 400
-        file_info = self.storage.get_file_info(key, ticket)
+        file_info = self.storage.get_file_info(key)
         for s3_key, header_key in {
             "AcceptRanges": "Accept-Ranges",
             "ContentLength": "Content-Length",
