@@ -196,6 +196,18 @@ class S3StorageManager:
             raise FileNotFoundException(message)
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
 
+    def get_file_info(self, file_name, ticket=None):
+        content_type = get_mimetype_from_filename(file_name)
+        if ticket:
+            bucket_name = self.__get_bucket_name(ticket)
+            client = self.s3.Bucket(bucket_name).meta.client
+            file_info = client.head_object(
+                Bucket=bucket_name, Key=self.__get_key(file_name, ticket=ticket)
+            )
+            file_info["ContentType"] = content_type
+            return file_info
+        return {"ContentType": content_type}
+
     def get_stream_generator(self, stream):
         return stream.iter_chunks()
 

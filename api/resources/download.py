@@ -13,7 +13,23 @@ class Download(BaseResource):
 
 class DownloadWithTicket(BaseResource):
     def head(self, key):
-        return Response(headers={"Content-Type": "image/jpeg"})
+        headers = dict()
+        try:
+            start_time = time.time()
+            ticket = self._get_ticket(
+                request.args.get("ticket_id"), request.args.get("api_key_hash")
+            )
+        except Exception as ex:
+            return str(ex), 400
+        file_info = self.storage.get_file_info(key, ticket)
+        for s3_key, header_key in {
+            "AcceptRanges": "Accept-Ranges",
+            "ContentLength": "Content-Length",
+            "ContentType": "Content-Type",
+        }.items():
+            if s3_key in file_info:
+                headers[header_key] = file_info[s3_key]
+        return Response(headers=headers)
 
     def get(self, key):
         try:
