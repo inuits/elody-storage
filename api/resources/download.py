@@ -1,5 +1,5 @@
 from app import logger, policy_factory
-from flask import request
+from flask import request, Response
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 import time
@@ -13,7 +13,7 @@ class Download(BaseResource):
 
 class DownloadWithTicket(BaseResource):
     def head(self, key):
-        return {}
+        return Response(headers={"Content-Type": "image/jpeg"})
 
     def get(self, key):
         try:
