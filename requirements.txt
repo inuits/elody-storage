@@ -41,4 +41,4 @@ s3transfer==0.10.1
 sentry-sdk[flask]==1.45.0
 six==1.16.0
 urllib3==2.2.1
-Werkzeug==3.0.1
+Werkzeug==3.0.2
