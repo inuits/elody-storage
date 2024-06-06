@@ -4,5 +4,5 @@ moto==5.0.9
 pluggy==1.5.0
 pytest==8.2.2
 PyYAML==6.0.1
-responses==0.25.0
+responses==0.25.2
 xmltodict==0.13.0
