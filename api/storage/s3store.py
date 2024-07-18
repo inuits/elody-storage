@@ -16,7 +16,7 @@ from elody.exceptions import (
 )
 from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
-from PIL import Image
+from PIL import Image, ExifTags, TiffImagePlugin
 
 
 class S3StorageManager:
@@ -103,16 +103,20 @@ class S3StorageManager:
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
-    def __update_mediafile_information(self, mediafile, md5sum, new_key, mimetype):
+    def __update_mediafile_information(
+        self, mediafile, md5sum, new_key, mimetype, exif_data=None
+    ):
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["original_filename"] = mediafile["filename"]
         mediafile["filename"] = new_key
         mediafile["original_file_location"] = f"/download/{new_key}"
-        mediafile[
-            "thumbnail_file_location"
-        ] = f"/iiif/3/{new_key}/full/,150/0/default.jpg"
+        mediafile["thumbnail_file_location"] = (
+            f"/iiif/3/{new_key}/full/,150/0/default.jpg"
+        )
         mediafile["mimetype"] = mimetype
+        if exif_data:
+            mediafile["technical_metadata"] = exif_data
         self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
@@ -240,10 +244,33 @@ class S3StorageManager:
             split_key[-1] = f"{md5sum}-{split_key[-1]}"
         return "/".join(split_key)
 
+    def _get_exif_data(self, file):
+        image = Image.open(file)
+        exif_data = image._getexif()
+        data = []
+        if exif_data is None:
+            return None
+        for key, value in exif_data.items():
+            if key in ExifTags.TAGS:
+                value = self._handle_value_to_be_serializable(value)
+                data.append({"key": ExifTags.TAGS[key], "value": value})
+        return data
+
+    def _handle_value_to_be_serializable(self, value):
+        if isinstance(value, TiffImagePlugin.IFDRational):
+            return str(value)
+        elif isinstance(value, bytes):
+            return value.decode("utf-8", "ignore")
+        elif isinstance(value, (tuple, list)):
+            return [self._handle_value_to_be_serializable(v) for v in value]
+        else:
+            return value
+
     def upload_file(self, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
+        exif_data = self._get_exif_data(file)
         try:
             self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
@@ -256,7 +283,9 @@ class S3StorageManager:
             Fileobj=file, Key=key
         )
         if mediafile:
-            self.__update_mediafile_information(mediafile, md5sum, key, mimetype)
+            self.__update_mediafile_information(
+                mediafile, md5sum, key, mimetype, exif_data
+            )
             self.__signal_file_uploaded(
                 mediafile,
                 mimetype,
