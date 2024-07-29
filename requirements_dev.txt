@@ -1,6 +1,6 @@
 coverage==7.6.0
 iniconfig==2.0.0
-moto==5.0.9
+moto==5.0.11
 pluggy==1.5.0
 pytest==8.2.2
 PyYAML==6.0.1
