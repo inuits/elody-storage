@@ -246,8 +246,8 @@ class S3StorageManager:
 
     def _get_exif_data(self, file):
         image = Image.open(file)
+        exif_data = image.getexif()._get_merged_dict()
         file.seek(0)
-        exif_data = image._getexif()
         data = []
         if exif_data is None:
             return None
