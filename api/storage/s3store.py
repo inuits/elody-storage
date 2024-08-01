@@ -271,7 +271,9 @@ class S3StorageManager:
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
-        exif_data = self._get_exif_data(file)
+        exif_data = (
+            self._get_exif_data(file) if mimetype.startswith("image") else list()
+        )
         try:
             self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
