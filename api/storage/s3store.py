@@ -31,6 +31,7 @@ class S3StorageManager:
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.headers = None
         self.session = requests.Session()
+        self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
 
     def set_headers(self, headers):
         self.headers = headers
@@ -152,18 +153,9 @@ class S3StorageManager:
         )
 
     def check_file_exists(self, filename, md5sum, ticket=None):
-        bucket_name = self.__get_bucket_name(ticket)
-        client = self.s3.Bucket(bucket_name).meta.client
-        if ticket:
-            try:
-                client.head_object(Bucket=bucket_name, Key=ticket["location"])
-            except ClientError as ex:
-                if ex.response["Error"]["Code"] == "404":
-                    return
-            raise DuplicateFileException(
-                f'{ticket["location"]} already exists in {bucket_name}'
-            )
-        else:
+        if self.duplicate_file_check in ["True", True, "true"]:
+            bucket_name = self.__get_bucket_name(ticket)
+            client = self.s3.Bucket(bucket_name).meta.client
             objects = client.list_objects_v2(Bucket=bucket_name, Prefix=md5sum)
             if len(objects.get("Contents", [])):
                 existing_file = objects.get("Contents", [])[0]["Key"]
