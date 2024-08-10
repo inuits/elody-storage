@@ -16,7 +16,7 @@ Flask==3.0.3
 Flask-Cors==4.0.1
 Flask-RESTful==0.3.10
 flask-swagger-ui==4.11.1
-gunicorn==22.0.0
+gunicorn==23.0.0
 humanfriendly==10.0
 idna==3.7
 inuits-policy-based-auth==9.6.0
