@@ -256,6 +256,8 @@ class S3StorageManager:
             return value.decode("utf-8", "ignore")
         elif isinstance(value, (tuple, list)):
             return [self._handle_value_to_be_serializable(v) for v in value]
+        elif isinstance(value, dict):
+            return {k: self._handle_value_to_be_serializable(v) for k, v in value.items()}
         else:
             return value
 
