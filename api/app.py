@@ -11,7 +11,6 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from importlib import import_module
 from inuits_policy_based_auth.policy_factory import PolicyFactory
-from job_helper.job_extension import JobExtension
 from rabbitmq_pika_flask import RabbitMQ
 from rabbitmq_pika_flask.ExchangeParams import ExchangeParams
 from storage.storagemanager import StorageManager
@@ -66,8 +65,6 @@ rabbit = RabbitMQ(
     )
 )
 rabbit.init_app(app, "basic", json.loads, json.dumps)
-
-jobs_extension = JobExtension(rabbit)
 
 app.register_blueprint(swaggerui_blueprint)
 

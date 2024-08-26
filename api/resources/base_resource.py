@@ -4,12 +4,13 @@ import requests
 import shutil
 import tempfile
 
-from app import jobs_extension, policy_factory
+from app import policy_factory, rabbit
 from elody.exceptions import (
     DuplicateFileException,
     NotFoundException,
     FileNotFoundException,
 )
+from elody.job import start_job, finish_job, fail_job
 from elody.util import get_mimetype_from_filename
 from flask import request, Response, stream_with_context
 from flask_restful import Resource, abort
@@ -118,26 +119,30 @@ class BaseResource(Resource):
         )
         return response
 
-    def _handle_file_upload(self, key=None, transcode=False, ticket=None):
-        try:
-            user = policy_factory.get_user_context().email or "default_uploader"
-        except NoUserContextException:
-            user = "default_uploader"
-        job = jobs_extension.create_new_job(
-            f'Starting {"transcode" if transcode else "file"} upload',
-            f'dams.upload_{"transcode" if transcode else "file"}',
-            user=user,
-        )
-        jobs_extension.progress_job(job, amount_of_jobs=1)
+    def _handle_file_upload(
+        self, key=None, transcode=False, ticket=None, parent_job_id=None, user=None
+    ):
+        if not user:
+            try:
+                user = policy_factory.get_user_context().email or "default_uploader"
+            except NoUserContextException:
+                user = "default_uploader"
+        job_id = None
         file = None
         try:
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file)
+            job_id = start_job(
+                f"Upload {key}{' transcode' if transcode else ''}",
+                "File upload",
+                get_rabbit=lambda: rabbit,
+                user_email=user,
+                parent_id=parent_job_id,
+            )
             if not (mediafile_id := request.args.get("id")) and not ticket:
                 raise NotFoundException("Provide either a mediafile ID or a ticket ID")
             if not mediafile_id and "mediafile_id" in ticket:
                 mediafile_id = ticket.get("mediafile_id")
-            jobs_extension.progress_job(job, mediafile_id=mediafile_id)
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key, ticket)
             else:
@@ -145,8 +150,9 @@ class BaseResource(Resource):
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()
-            jobs_extension.fail_job(job, message=str(ex))
+            if job_id:
+                fail_job(job_id, str(ex), get_rabbit=lambda: rabbit)
             return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
-        jobs_extension.finish_job(job, message=f"Successfully uploaded {key}")
         file.close()
+        finish_job(job_id, get_rabbit=lambda: rabbit)
         return "", 201
