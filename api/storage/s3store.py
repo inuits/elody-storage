@@ -264,7 +264,7 @@ class S3StorageManager:
             return value
         
     def _check_keys_and_extract_creation_dates(self, exif_data):
-        keys_to_check = ['exif_datetime', 'Xmp.xmp.CreateDate', 'Xmp.xmp.MetadataDate', 'Xmp.dc.date']
+        keys_to_check = ['exif_datetime', 'Xmp.xmp.CreateDate', 'Xmp.xmp.MetadataDate', 'Xmp.dc.date', "DateTimeDigitized", "DateTimeOriginal"]
         for item in exif_data:
             if item['key'] in keys_to_check:
                 return item['value']
