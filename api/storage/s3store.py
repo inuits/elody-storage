@@ -5,6 +5,7 @@ import io
 import magic
 import os
 import requests
+from dateutil import parser
 
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
@@ -267,7 +268,13 @@ class S3StorageManager:
         keys_to_check = ['exif_datetime', 'Xmp.xmp.CreateDate', 'Xmp.xmp.MetadataDate', 'Xmp.dc.date', "DateTimeDigitized", "DateTimeOriginal"]
         for item in exif_data:
             if item['key'] in keys_to_check:
-                return item['value']
+                date_str = item['value']
+                try:
+                    date_obj = parser.parse(date_str)
+                    iso_date_str = date_obj.isoformat()
+                    return iso_date_str
+                except ValueError:
+                    return date_str
         return None
 
     def upload_file(self, file, mediafile_id, key, ticket):
