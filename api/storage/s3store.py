@@ -5,11 +5,11 @@ import io
 import magic
 import os
 import requests
-from dateutil import parser
 
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
+from dateutil import parser
 from elody.exceptions import (
     DuplicateFileException,
     FileNotFoundException,
@@ -263,12 +263,19 @@ class S3StorageManager:
             }
         else:
             return value
-        
+
     def _check_keys_and_extract_creation_dates(self, exif_data):
-        keys_to_check = ['exif_datetime', 'Xmp.xmp.CreateDate', 'Xmp.xmp.MetadataDate', 'Xmp.dc.date', "DateTimeDigitized", "DateTimeOriginal"]
+        keys_to_check = [
+            "exif_datetime",
+            "Xmp.xmp.CreateDate",
+            "Xmp.xmp.MetadataDate",
+            "Xmp.dc.date",
+            "DateTimeDigitized",
+            "DateTimeOriginal",
+        ]
         for item in exif_data:
-            if item['key'] in keys_to_check:
-                date_str = item['value']
+            if item["key"] in keys_to_check:
+                date_str = item["value"]
                 try:
                     date_obj = parser.parse(date_str)
                     iso_date_str = date_obj.isoformat()
@@ -284,7 +291,9 @@ class S3StorageManager:
         exif_data = (
             self._get_exif_data(file) if mimetype.startswith("image") else list()
         )
-        mediafile["file_creation_date"] = self._check_keys_and_extract_creation_dates(exif_data)
+        mediafile["file_creation_date"] = self._check_keys_and_extract_creation_dates(
+            exif_data
+        )
         try:
             self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
