@@ -18,7 +18,7 @@ Flask-RESTful==0.3.10
 flask-swagger-ui==4.11.1
 gunicorn==23.0.0
 humanfriendly==10.0
-idna==3.7
+idna==3.10
 inuits-policy-based-auth==9.6.0
 itsdangerous==2.2.0
 Jinja2==3.1.4
