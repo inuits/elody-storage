@@ -320,6 +320,7 @@ class S3StorageManager:
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
+        mimetype = self.__get_file_mimetype(file, key)
         self.check_file_exists(key, md5sum)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
             Fileobj=file, Key=key
@@ -328,8 +329,10 @@ class S3StorageManager:
         new_key = key.split("/")[-1]
         data = {
             "filename": key,
+            "md5sum": md5sum,
             "transcode_file_location": f"/download/{new_key}",
             "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+            "mimetype": mimetype
         }
         try:
             self.session.post(
