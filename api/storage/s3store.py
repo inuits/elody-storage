@@ -254,7 +254,7 @@ class S3StorageManager:
         if isinstance(value, TiffImagePlugin.IFDRational):
             return str(value)
         elif isinstance(value, bytes):
-            return value.decode("utf-8", "ignore")
+            return "(Binary data suppressed)"
         elif isinstance(value, (tuple, list)):
             return [self._handle_value_to_be_serializable(v) for v in value]
         elif isinstance(value, dict):
@@ -332,7 +332,7 @@ class S3StorageManager:
             "md5sum": md5sum,
             "transcode_file_location": f"/download/{new_key}",
             "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
-            "mimetype": mimetype
+            "mimetype": mimetype,
         }
         try:
             self.session.post(
