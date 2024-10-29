@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 from app import policy_factory, rabbit
+from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
     NotFoundException,
@@ -64,20 +65,28 @@ class BaseResource(Resource):
             return file.filename
         if getattr(file, "name", None):
             return file.name
-        raise Exception("Could not determine filename for upload")
+        raise Exception(
+            f"{get_error_code(ErrorCode.NO_FILENAME_SPECIFIED, get_write())} Could not determine filename for upload"
+        )
 
     def _get_ticket(self, ticket_id, api_key_hash=None):
         if not ticket_id:
-            raise Exception("No ticket id given")
+            raise Exception(
+                f"{get_error_code(ErrorCode.NO_TICKET_ID_SPECIFIED, get_write())} No ticket id given"
+            )
         request_url = f"{self.collection_api_url}/tickets/{ticket_id}"
         if api_key_hash:
             request_url = f"{request_url}?api_key_hash={api_key_hash}"
         response = requests.get(request_url, headers=self.auth_headers)
         if response.status_code != 200:
-            raise NotFoundException(f"Ticket with id {ticket_id} not found")
+            raise NotFoundException(
+                f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found"
+            )
         ticket = response.json()
         if ticket.get("is_expired", True):
-            raise Exception("Ticket is expired")
+            raise Exception(
+                f"{get_error_code(ErrorCode.TICKET_EXPIRED, get_write())} Ticket is expired"
+            )
         return ticket
 
     def _handle_file_download(self, key, ticket=None):
@@ -140,7 +149,9 @@ class BaseResource(Resource):
                 parent_id=parent_job_id,
             )
             if not (mediafile_id := request.args.get("id")) and not ticket:
-                raise NotFoundException("Provide either a mediafile ID or a ticket ID")
+                raise NotFoundException(
+                    f"{get_error_code(ErrorCode.PROVIDE_MEDIAFILE_ID_OR_TICKET_ID, get_write())} Provide either a mediafile ID or a ticket ID"
+                )
             if not mediafile_id and "mediafile_id" in ticket:
                 mediafile_id = ticket.get("mediafile_id")
             if transcode:

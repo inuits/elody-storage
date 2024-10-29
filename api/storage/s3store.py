@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
 from dateutil import parser
+from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
     FileNotFoundException,
@@ -81,7 +82,9 @@ class S3StorageManager:
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
-            raise DuplicateFileException(message)
+            raise DuplicateFileException(
+                f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
+            )
         mediafile_id = self.__get_raw_id(mediafile)
         if self.__get_raw_id(found_mediafile) != mediafile_id:
             self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
@@ -92,7 +95,9 @@ class S3StorageManager:
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
             )
-        raise DuplicateFileException(message)
+        raise DuplicateFileException(
+            f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
+        )
 
     def __signal_file_uploaded(self, mediafile, mimetype, url, headers):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
@@ -131,9 +136,13 @@ class S3StorageManager:
         elif not fatal:
             return None
         elif req.status_code == 404:
-            raise NotFoundException("Could not get mediafile with provided id")
+            raise NotFoundException(
+                f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Could not get mediafile with provided id"
+            )
         else:
-            raise Exception("Something went wrong while getting mediafile")
+            raise Exception(
+                f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Something went wrong while getting mediafile"
+            )
 
     def add_exif_data(self, mediafile):
         if "image" not in mediafile["mimetype"]:
@@ -163,7 +172,11 @@ class S3StorageManager:
                 error_message = (
                     f"Duplicate file {filename} matches existing file {existing_file}."
                 )
-                raise DuplicateFileException(error_message, existing_file, md5sum)
+                raise DuplicateFileException(
+                    f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {error_message}",
+                    existing_file,
+                    md5sum,
+                )
 
     def check_health(self):
         self.s3.buckets.all()
@@ -190,7 +203,7 @@ class S3StorageManager:
         except ClientError:
             message = f"File {file_name} not found with key {self.__get_key(file_name, ticket=ticket)}"
             app.logger.error(message)
-            raise FileNotFoundException(message)
+            raise FileNotFoundException(f"{get_error_code(ErrorCode.FILE_NOT_FOUND, get_write())} {message}")
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
 
     def get_file_info(self, file_name, ticket=None):
@@ -226,7 +239,7 @@ class S3StorageManager:
             return ticket["bucket"]
         if bucket := os.getenv("MINIO_BUCKET"):
             return bucket
-        raise Exception("No bucket for upload was specified")
+        raise Exception(f"{get_error_code(ErrorCode.NO_BUCKET_SPECIFIED, get_write())} No bucket for upload was specified")
 
     def __get_key(self, key, md5sum=None, ticket=None, transcode=False):
         input_key = ticket["location"] if ticket else key
