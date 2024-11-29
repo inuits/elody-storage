@@ -19,6 +19,7 @@ from elody.exceptions import (
 from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
 from PIL import Image, ExifTags, TiffImagePlugin
+from urllib.parse import urlparse
 
 
 class S3StorageManager:
@@ -322,10 +323,12 @@ class S3StorageManager:
             self.__update_mediafile_information(
                 mediafile, md5sum, key, mimetype, exif_data
             )
+            mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
+            download_url = urlparse(mediafile["original_file_location"])
             self.__signal_file_uploaded(
                 mediafile,
                 mimetype,
-                f'{self.storage_api_url}{mediafile["original_file_location"]}',
+                f"{self.storage_api_url}{download_url.path}?{download_url.query}",
                 self.headers,
             )
 
