@@ -329,7 +329,7 @@ class S3StorageManager:
             self.__signal_file_uploaded(
                 mediafile,
                 mimetype,
-                f"{self.storage_api_url}{download_url.path}?{download_url.query}",
+                f"{self.storage_api_url.replace('/storage/v1', '')}{download_url.path}?{download_url.query}",
                 self.headers,
                 ticket,
             )
