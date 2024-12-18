@@ -30,7 +30,7 @@ class BaseResource(Resource):
         try:
             tenant = policy_factory.get_user_context().x_tenant.id
         except NoUserContextException:
-            tenant = request.headers.get("apikey")
+            tenant = request.headers.get("apikey", os.getenv("STATIC_APIKEY"))
         if tenant:
             return {
                 "Authorization": f'Bearer {os.getenv("STATIC_JWT")}',
