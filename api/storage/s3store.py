@@ -4,6 +4,7 @@ import hashlib
 import io
 import magic
 import os
+import re
 import requests
 
 from botocore.exceptions import ClientError
@@ -118,6 +119,8 @@ class S3StorageManager:
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["original_filename"] = mediafile["filename"]
+        if not mediafile.get("technical_origin"): # It will otherwise overwrite the original if already present
+            mediafile["technical_origin"] = "original"
         mediafile["filename"] = new_key
         mediafile["original_file_location"] = f"/download/{new_key}"
         mediafile["thumbnail_file_location"] = (
@@ -345,11 +348,15 @@ class S3StorageManager:
         )
         mediafile["identifiers"].append(md5sum)
         new_key = key.split("/")[-1]
+        original_filename = self.__get_filename_from_key(key)
+
         data = {
             "filename": key,
             "md5sum": md5sum,
             "transcode_file_location": f"/download/{new_key}",
             "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+            "original_filename": original_filename,
+            "technical_origin": "transcode",
             "mimetype": mimetype,
         }
         try:
@@ -359,3 +366,8 @@ class S3StorageManager:
             )
         except Exception as ex:
             raise Exception(str(ex))
+
+    def __get_filename_from_key(self, key):
+        uuid_pattern = re.compile(r'[0-9a-fA-F]{32}-')
+        original_filename = uuid_pattern.sub('', key)
+        return original_filename
