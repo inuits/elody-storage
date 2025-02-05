@@ -157,7 +157,7 @@ class BaseResource(Resource):
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key, ticket)
             else:
-                self.storage.upload_file(file, mediafile_id, key, ticket)
+                self.storage.upload_file(file, mediafile_id, key, ticket, parent_job_id=parent_job_id)
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()

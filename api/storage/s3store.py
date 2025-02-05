@@ -101,7 +101,7 @@ class S3StorageManager:
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
         )
 
-    def __signal_file_uploaded(self, mediafile, mimetype, url, headers, ticket=None):
+    def __signal_file_uploaded(self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
         data = {
             "mediafile": mediafile,
@@ -109,6 +109,7 @@ class S3StorageManager:
             "url": url,
             "headers": headers,
             "ticket": ticket,
+            "parent_job_id": parent_job_id
         }
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.file_uploaded")
@@ -302,7 +303,7 @@ class S3StorageManager:
                     return date_str
         return None
 
-    def upload_file(self, file, mediafile_id, key, ticket):
+    def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
@@ -335,6 +336,7 @@ class S3StorageManager:
                 f"{self.storage_api_url.replace('/storage/v1/', '')}{download_url.path}?{download_url.query}",
                 self.headers,
                 ticket,
+                parent_job_id
             )
 
     def upload_transcode(self, file, mediafile_id, key, ticket):
