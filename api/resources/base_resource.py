@@ -101,6 +101,8 @@ class BaseResource(Resource):
         headers["Accept-Ranges"] = "bytes"
         headers["Content-Type"] = content_type
         headers["Content-Length"] = full_length
+        if ticket.get('original_filename'):
+            headers["Content-Disposition"] = f'attachment; filename="{ticket.get("original_filename")}"'
         if range_header := request.headers.get("Range"):
             byte_start, byte_end, length = self.__get_byte_range(range_header)
             if byte_end:
@@ -157,7 +159,9 @@ class BaseResource(Resource):
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key, ticket)
             else:
-                self.storage.upload_file(file, mediafile_id, key, ticket, parent_job_id=parent_job_id)
+                self.storage.upload_file(
+                    file, mediafile_id, key, ticket, parent_job_id=parent_job_id
+                )
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()
