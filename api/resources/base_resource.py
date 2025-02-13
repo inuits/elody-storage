@@ -101,7 +101,7 @@ class BaseResource(Resource):
         headers["Accept-Ranges"] = "bytes"
         headers["Content-Type"] = content_type
         headers["Content-Length"] = full_length
-        if ticket.get('original_filename'):
+        if ticket and ticket.get('original_filename'):
             headers["Content-Disposition"] = f'attachment; filename="{ticket.get("original_filename")}"'
         if range_header := request.headers.get("Range"):
             byte_start, byte_end, length = self.__get_byte_range(range_header)
