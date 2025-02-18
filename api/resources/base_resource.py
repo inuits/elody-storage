@@ -4,14 +4,14 @@ import requests
 import shutil
 import tempfile
 
-from app import policy_factory, rabbit
+from app import get_user_context, rabbit
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
     NotFoundException,
     FileNotFoundException,
 )
-from elody.job import start_job, finish_job, fail_job
+from elody.job import init_job, start_job, finish_job, fail_job
 from elody.util import get_mimetype_from_filename
 from flask import request, Response, stream_with_context
 from flask_restful import Resource, abort
@@ -28,7 +28,7 @@ class BaseResource(Resource):
 
     def __get_auth_headers(self):
         try:
-            tenant = policy_factory.get_user_context().x_tenant.id
+            tenant = get_user_context().x_tenant.id
         except NoUserContextException:
             tenant = request.headers.get("apikey", os.getenv("STATIC_APIKEY"))
         if tenant:
@@ -135,7 +135,7 @@ class BaseResource(Resource):
     ):
         if not user:
             try:
-                user = policy_factory.get_user_context().email or "default_uploader"
+                user = get_user_context().email or "default_uploader"
             except NoUserContextException:
                 user = "default_uploader"
         job_id = None
@@ -143,13 +143,14 @@ class BaseResource(Resource):
         try:
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file)
-            job_id = start_job(
+            job_id = init_job(
                 f"Upload {key}{' transcode' if transcode else ''}",
                 "File upload",
                 get_rabbit=lambda: rabbit,
                 user_email=user,
                 parent_id=parent_job_id,
             )
+            start_job(job_id, get_rabbit=lambda: rabbit)
             if not (mediafile_id := request.args.get("id")) and not ticket:
                 raise NotFoundException(
                     f"{get_error_code(ErrorCode.PROVIDE_MEDIAFILE_ID_OR_TICKET_ID, get_write())} Provide either a mediafile ID or a ticket ID"

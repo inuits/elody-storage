@@ -4,15 +4,16 @@ import os
 import secrets
 
 from elody.loader import load_apps, load_policies
-from flask import Flask
+from flask import Flask, g
 from flask_cors import CORS
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from importlib import import_module
-from inuits_policy_based_auth.policy_factory import PolicyFactory
+from inuits_policy_based_auth import PolicyFactory
 from rabbitmq_pika_flask import RabbitMQ
 from rabbitmq_pika_flask.ExchangeParams import ExchangeParams
+from inuits_policy_based_auth.exceptions import NoUserContextException
 from storage.storagemanager import StorageManager
 
 if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
@@ -87,7 +88,20 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
     health.add_check(storage_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
-policy_factory = PolicyFactory()
+def get_user_context():
+    try:
+        user_context = g.get("user_context")
+        if not user_context:
+            raise NoUserContextException()
+    except Exception as exception:
+        raise exception
+
+    return user_context
+
+def user_context_setter(user_context):
+    g.user_context = user_context
+
+policy_factory = PolicyFactory(user_context_setter)
 load_apps(app, logger)
 try:
     module = import_module("apps.permissions")
