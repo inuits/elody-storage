@@ -119,6 +119,7 @@ class S3StorageManager:
     ):
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
+        mediafile["md5sum"] = md5sum
         mediafile["original_filename"] = mediafile["filename"]
         if not mediafile.get("technical_origin"): # It will otherwise overwrite the original if already present
             mediafile["technical_origin"] = "original"
