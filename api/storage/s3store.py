@@ -177,7 +177,7 @@ class S3StorageManager:
             if len(objects.get("Contents", [])):
                 existing_file = objects.get("Contents", [])[0]["Key"]
                 error_message = (
-                    f"Duplicate file {filename} matches existing file {existing_file}."
+                    f" | existing_file:{existing_file} - Duplicate file {filename} matches existing file {existing_file}."
                 )
                 raise DuplicateFileException(
                     f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {error_message}",
