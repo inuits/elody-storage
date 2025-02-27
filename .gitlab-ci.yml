@@ -1,19 +1,22 @@
 ---
 include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
-    ref: 'v3.6.1'
+    ref: 'v4.1.0'
     file: 
-      - '/pipelines/multi-customer-delivery.yml'
+      - '/pipelines/customers/dams/deliver-multi-customer.yml'
       - '/jobs/build-variant/pip.yml'
 
 variables:
   PROJECT: 'dams'
   APPLICATION: 'storage'
 
+  HARBOR_PROJECT_DEV: elody-dams-dev
+
 customer:
   parallel:
     matrix:
       - CUSTOMER:
-        - digipolis
+        - amvb
         - coghent
-        - inuits
+        - digipolis
+        - vliz
