@@ -4,10 +4,7 @@ include:
     ref: 'v4.1.0'
     file: 
       - '/pipelines/customers/dams/deliver-multi-customer.yml'
-  - project: 'inuits/gitlab-ci/pipeline-templates'
-    ref: 'v3.6.1'
-    file: 
-      - '/jobs/build-variant/pip.yml'
+      - '/jobs/docker/build-pip.yml'
 
 
 variables:
