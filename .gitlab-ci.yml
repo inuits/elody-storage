@@ -13,7 +13,7 @@ variables:
 
   HARBOR_PROJECT_DEV: elody-dams-dev
 
-customer:
+customers:
   parallel:
     matrix:
       - CUSTOMER:
