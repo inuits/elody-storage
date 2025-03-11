@@ -169,6 +169,8 @@ class BaseResource(Resource):
             if job_id:
                 fail_job(job_id, str(ex), get_rabbit=lambda: rabbit)
             return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
-        file.close()
+        finally:
+            if file:
+                file.close()
         finish_job(job_id, get_rabbit=lambda: rabbit)
         return "", 201

@@ -11,8 +11,6 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from importlib import import_module
 from inuits_policy_based_auth import PolicyFactory
-from rabbitmq_pika_flask import RabbitMQ
-from rabbitmq_pika_flask.ExchangeParams import ExchangeParams
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from storage.storagemanager import StorageManager
 
@@ -45,8 +43,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-rabbit = RabbitMQ(
+amqp_module = import_module(os.getenv("AMQP_MANAGER", "rabbitmq_pika_flask"))
+ExchangeParams = (
+    amqp_module.ExchangeParams
+    if amqp_module.__name__ == "amqpstorm_flask"
+    else amqp_module.ExchangeParams.ExchangeParams
+)
+rabbit = amqp_module.RabbitMQ(
     exchange_params=ExchangeParams(
+        auto_delete=os.getenv("AUTO_DELETE_EXCHANGE", False) in [
+            1,
+            "1",
+            True,
+            "True",
+            "true",
+        ],
         passive=os.getenv("PASSIVE_EXCHANGE", False)
         in [
             1,
