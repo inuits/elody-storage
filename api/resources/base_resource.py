@@ -90,45 +90,46 @@ class BaseResource(Resource):
         return ticket
 
     def _handle_file_download(self, key, ticket=None):
-        chunk = False
         try:
             file_object = self.storage.download_file(key, ticket=ticket)
         except FileNotFoundException as ex:
             abort(404, message=str(ex))
-        content_type = get_mimetype_from_filename(key)
+
         full_length = file_object["content_length"]
+        content_type = get_mimetype_from_filename(key)
         headers = Headers()
         headers["Accept-Ranges"] = "bytes"
         headers["Content-Type"] = content_type
-        headers["Content-Length"] = full_length
-        if ticket and ticket.get('original_filename'):
-            headers["Content-Disposition"] = f'attachment; filename="{ticket.get("original_filename")}"'
-        if range_header := request.headers.get("Range"):
+
+        range_header = request.headers.get("Range")
+        if range_header:
             byte_start, byte_end, length = self.__get_byte_range(range_header)
-            if byte_end:
-                chunk = True
-                file_object = self.storage.download_file(
-                    key, f"bytes={byte_start}-{byte_end}", ticket
-                )
-                end = byte_start + length - 1
-                headers["Content-Range"] = f"bytes {byte_start}-{end}/{full_length}"
-                headers["Content-Transfer-Encoding"] = "binary"
-                headers["Connection"] = "Keep-Alive"
-                headers["Content-Type"] = content_type
-                headers["Content-Length"] = file_object["content_length"]
-                if byte_end == 1:
-                    headers["Content-Length"] = "1"
-        response = Response(
-            stream_with_context(
-                self.storage.get_stream_generator(file_object["stream"])
-            ),
+            if byte_end is None:
+                byte_end = full_length - 1
+                length = byte_end + 1 - byte_start
+
+            file_object = self.storage.download_file(
+                key, f"bytes={byte_start}-{byte_end}", ticket
+            )
+
+            headers["Content-Range"] = f"bytes {byte_start}-{byte_end}/{full_length}"
+            headers["Content-Length"] = file_object["content_length"]
+            return Response(
+                stream_with_context(self.storage.get_stream_generator(file_object["stream"])),
+                mimetype=content_type,
+                headers=headers,
+                status=206,
+                direct_passthrough=True,
+            )
+
+        headers["Content-Length"] = full_length
+        return Response(
+            stream_with_context(self.storage.get_stream_generator(file_object["stream"])),
             mimetype=content_type,
-            content_type=content_type,
             headers=headers,
-            status=206 if chunk else 200,
-            direct_passthrough=chunk,
+            status=200,
+            direct_passthrough=False,
         )
-        return response
 
     def _handle_file_upload(
         self, key=None, transcode=False, ticket=None, parent_job_id=None, user=None
