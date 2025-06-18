@@ -101,7 +101,9 @@ class S3StorageManager:
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
         )
 
-    def __signal_file_uploaded(self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None):
+    def __signal_file_uploaded(
+        self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None
+    ):
         attributes = {"type": "dams.file_uploaded", "source": "dams"}
         data = {
             "mediafile": mediafile,
@@ -109,7 +111,7 @@ class S3StorageManager:
             "url": url,
             "headers": headers,
             "ticket": ticket,
-            "parent_job_id": parent_job_id
+            "parent_job_id": parent_job_id,
         }
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.file_uploaded")
@@ -121,7 +123,9 @@ class S3StorageManager:
         mediafile["identifiers"].append(md5sum)
         mediafile["md5sum"] = md5sum
         mediafile["original_filename"] = mediafile["filename"]
-        if not mediafile.get("technical_origin"): # It will otherwise overwrite the original if already present
+        if not mediafile.get(
+            "technical_origin"
+        ):  # It will otherwise overwrite the original if already present
             mediafile["technical_origin"] = "original"
         mediafile["filename"] = new_key
         mediafile["original_file_location"] = f"/download/{new_key}"
@@ -176,9 +180,7 @@ class S3StorageManager:
             objects = client.list_objects_v2(Bucket=bucket_name, Prefix=md5sum)
             if len(objects.get("Contents", [])):
                 existing_file = objects.get("Contents", [])[0]["Key"]
-                error_message = (
-                    f" | existing_file:{existing_file} - Duplicate file {filename} matches existing file {existing_file}."
-                )
+                error_message = f" | existing_file:{existing_file} - Duplicate file {filename} matches existing file {existing_file}."
                 raise DuplicateFileException(
                     f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {error_message}",
                     existing_file,
@@ -210,7 +212,9 @@ class S3StorageManager:
         except ClientError:
             message = f"File {file_name} not found with key {self.__get_key(file_name, ticket=ticket)}"
             app.logger.error(message)
-            raise FileNotFoundException(f"{get_error_code(ErrorCode.FILE_NOT_FOUND, get_write())} {message}")
+            raise FileNotFoundException(
+                f"{get_error_code(ErrorCode.FILE_NOT_FOUND, get_write())} {message}"
+            )
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
 
     def get_file_info(self, file_name, ticket=None):
@@ -246,7 +250,9 @@ class S3StorageManager:
             return ticket["bucket"]
         if bucket := os.getenv("MINIO_BUCKET"):
             return bucket
-        raise Exception(f"{get_error_code(ErrorCode.NO_BUCKET_SPECIFIED, get_write())} No bucket for upload was specified")
+        raise Exception(
+            f"{get_error_code(ErrorCode.NO_BUCKET_SPECIFIED, get_write())} No bucket for upload was specified"
+        )
 
     def __get_key(self, key, md5sum=None, ticket=None, transcode=False):
         input_key = ticket["location"] if ticket else key
@@ -337,7 +343,7 @@ class S3StorageManager:
                 f"{self.storage_api_url.replace('/storage/v1/', '')}{download_url.path}?{download_url.query}",
                 self.headers,
                 ticket,
-                parent_job_id
+                parent_job_id,
             )
 
     def upload_transcode(self, file, mediafile_id, key, ticket):
@@ -371,6 +377,6 @@ class S3StorageManager:
             raise Exception(str(ex))
 
     def __get_filename_from_key(self, key):
-        uuid_pattern = re.compile(r'[0-9a-fA-F]{32}-')
-        original_filename = uuid_pattern.sub('', key)
+        uuid_pattern = re.compile(r"[0-9a-fA-F]{32}-")
+        original_filename = uuid_pattern.sub("", key)
         return original_filename

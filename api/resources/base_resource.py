@@ -115,7 +115,9 @@ class BaseResource(Resource):
             headers["Content-Range"] = f"bytes {byte_start}-{byte_end}/{full_length}"
             headers["Content-Length"] = file_object["content_length"]
             return Response(
-                stream_with_context(self.storage.get_stream_generator(file_object["stream"])),
+                stream_with_context(
+                    self.storage.get_stream_generator(file_object["stream"])
+                ),
                 mimetype=content_type,
                 headers=headers,
                 status=206,
@@ -124,7 +126,9 @@ class BaseResource(Resource):
 
         headers["Content-Length"] = full_length
         return Response(
-            stream_with_context(self.storage.get_stream_generator(file_object["stream"])),
+            stream_with_context(
+                self.storage.get_stream_generator(file_object["stream"])
+            ),
             mimetype=content_type,
             headers=headers,
             status=200,

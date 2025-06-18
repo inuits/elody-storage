@@ -4,6 +4,7 @@ import os
 import secrets
 
 from elody.loader import load_apps, load_policies
+from elody.util import CustomJSONEncoder, custom_json_dumps
 from flask import Flask, g
 from flask_cors import CORS
 from flask_restful import Api
@@ -32,6 +33,7 @@ API_URL = (
 swaggerui_blueprint = get_swaggerui_blueprint(SWAGGER_URL, API_URL)
 
 app = Flask(__name__)
+app.config["RESTFUL_JSON"] = {"cls": CustomJSONEncoder}
 api = Api(app)
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
 cors = CORS(app, origins=[str(os.getenv("DAMS_FRONTEND_URL"))])
@@ -51,7 +53,8 @@ ExchangeParams = (
 )
 rabbit = amqp_module.RabbitMQ(
     exchange_params=ExchangeParams(
-        auto_delete=os.getenv("AUTO_DELETE_EXCHANGE", False) in [
+        auto_delete=os.getenv("AUTO_DELETE_EXCHANGE", False)
+        in [
             1,
             "1",
             True,
@@ -76,7 +79,12 @@ rabbit = amqp_module.RabbitMQ(
         ],
     )
 )
-rabbit.init_app(app, "basic", json.loads, json.dumps)
+if amqp_module.__name__ == "amqpstorm_flask":
+    rabbit.init_app(
+        app, "basic", json.loads, custom_json_dumps, json_encoder=CustomJSONEncoder
+    )
+else:
+    rabbit.init_app(app, "basic", json.loads, custom_json_dumps)
 
 app.register_blueprint(swaggerui_blueprint)
 
@@ -98,6 +106,7 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
     health.add_check(storage_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
+
 def get_user_context():
     try:
         user_context = g.get("user_context")
@@ -108,8 +117,10 @@ def get_user_context():
 
     return user_context
 
+
 def user_context_setter(user_context):
     g.user_context = user_context
+
 
 policy_factory = PolicyFactory(user_context_setter)
 load_apps(app, logger)
