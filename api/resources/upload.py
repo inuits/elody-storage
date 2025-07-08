@@ -13,6 +13,7 @@ class Upload(BaseResource):
 
 
 class UploadWithTicket(BaseResource):
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         try:
             ticket = self._get_ticket(request.args.get("ticket_id"))
@@ -34,6 +35,7 @@ class UploadKey(BaseResource):
 
 
 class UploadKeyWithTicket(BaseResource):
+    @policy_factory.authenticate(RequestContext(request))
     def post(self, key):
         try:
             ticket = self._get_ticket(request.args.get("ticket_id"))
