@@ -313,6 +313,8 @@ class S3StorageManager:
     def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
+        if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
+            raise Exception("Empty file, upload aborted")
         mimetype = self.__get_file_mimetype(file, key)
         exif_data = (
             self._get_exif_data(file) if mimetype.startswith("image") else list()
@@ -349,6 +351,8 @@ class S3StorageManager:
     def upload_transcode(self, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
+        if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
+            raise Exception("Empty file, upload aborted")
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
         mimetype = self.__get_file_mimetype(file, key)
         self.check_file_exists(key, md5sum)
