@@ -21,7 +21,12 @@ from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
 from PIL import Image, ExifTags, TiffImagePlugin
 from urllib.parse import urlparse
+import imagehash
 
+
+class SimilarImageException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 class S3StorageManager:
     def __init__(self):
@@ -49,6 +54,22 @@ class S3StorageManager:
             hash_obj.update(chunk)
         file.seek(0)
         return hash_obj.hexdigest()
+
+    def __calculate_phash(self, file, key) -> imagehash.ImageHash | None:
+        file_mimetype = self.__get_file_mimetype(file, key)
+
+        if not file or not file_mimetype.startswith('image/'):
+            return None
+
+        try:
+            img = Image.open(file)
+            phash = imagehash.phash(img)
+            file.seek(0)
+            return phash
+        except Exception as ex:
+            app.logger.warning(f"Could not calculate perceptual hash: {str(ex)}")
+            file.seek(0)
+            return None
 
     def __get_exif_for_mediafile(self, mediafile):
         artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
@@ -101,6 +122,34 @@ class S3StorageManager:
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
         )
 
+    def __handle_similar_image(self, new_file_obj, new_key, existing_key, ticket):
+        bucket = self.__get_bucket_name(ticket)
+        client = self.s3.Bucket(bucket).meta.client
+        existing_mediafile_id = existing_key.split("-", 1)[0]
+
+        new_file_obj.seek(0)
+        new_img = Image.open(new_file_obj)
+        new_px = new_img.width * new_img.height
+
+        existing_obj = client.get_object(Bucket=bucket, Key=existing_key)
+        existing_stream = existing_obj['Body']
+        existing_img = Image.open(existing_stream)
+        existing_size = existing_img.width * existing_img.height
+
+        if new_px > existing_size:
+            self.s3.Bucket(bucket).Object(existing_key).delete()
+            self.session.delete(f"{self.collection_api_url}/mediafiles/{existing_mediafile_id}")
+            app.logger.warning(
+                f"Deleted lower-resolution image {existing_key}  in favor of newer image {new_key}")
+            new_file_obj.seek(0)
+            return
+        else:
+            msg = (
+                f"Aborting upload: existing image {existing_key} ({existing_size}px) "
+                f"is at least as large as new {new_key} ({new_px}px)."
+            )
+            raise SimilarImageException(msg)
+
     def __signal_file_uploaded(
         self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None
     ):
@@ -117,11 +166,13 @@ class S3StorageManager:
         app.rabbit.send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(
-        self, mediafile, md5sum, new_key, mimetype, exif_data=None
+        self, mediafile, md5sum, new_key, mimetype, exif_data=None, phash=None
     ):
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["md5sum"] = md5sum
+        if phash:
+            mediafile["perceptual_hash"] = str(phash)
         mediafile["original_filename"] = mediafile["filename"]
         if not mediafile.get(
             "technical_origin"
@@ -186,6 +237,30 @@ class S3StorageManager:
                     existing_file,
                     md5sum,
                 )
+
+    def check_similar_images(self, phash, ticket=None, max_distance=5):
+        if not phash:
+            return
+
+        bucket_name = self.__get_bucket_name(ticket)
+        client = self.s3.Bucket(bucket_name).meta.client
+
+        objects = client.list_objects_v2(Bucket=bucket_name)
+        for obj in objects.get("Contents", []):
+            key = obj["Key"]
+            head = client.head_object(Bucket=bucket_name, Key=key)
+            existing_hex = head.get("Metadata", {}).get("perceptual_hash")
+            if existing_hex:
+                existing_hash = imagehash.hex_to_hash(existing_hex)
+                distance = phash - existing_hash
+                if distance <= max_distance:
+                    app.logger.info(
+                        f"Found similar image with perceptual hash {existing_hex} for {key} with distance {distance}"
+                    )
+                    return key
+            else:
+                continue
+        return None
 
     def check_health(self):
         self.s3.buckets.all()
@@ -315,6 +390,11 @@ class S3StorageManager:
         md5sum = self.__calculate_md5(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
+        if int(os.getenv("ENABLE_P_HASH", "1")) == 1:
+            phash = self.__calculate_phash(file, key)
+        else:
+            phash = None
+
         mimetype = self.__get_file_mimetype(file, key)
         exif_data = (
             self._get_exif_data(file) if mimetype.startswith("image") else list()
@@ -330,12 +410,34 @@ class S3StorageManager:
                     mediafile, mimetype, ex.md5sum, ex.filename, ex.message
                 )
         key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
+
+        if phash:
+            try:
+                existing_key = self.check_similar_images(phash, ticket, max_distance=8)
+                if existing_key:
+                    self.__handle_similar_image(
+                        new_file_obj=file,
+                        new_key=key,
+                        existing_key=existing_key,
+                        ticket=ticket,
+                    )
+            except SimilarImageException as ex:
+                app.logger.warning(str(ex))
+                file.seek(0)
+                return
+
+        extra = {}
+        if phash:
+            extra = {"ExtraArgs": {"Metadata": {"perceptual_hash": str(phash)}}}
+
+        file.seek(0)
         self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
-            Fileobj=file, Key=key
+            Fileobj=file, Key=key, **extra
         )
+
         if mediafile:
             self.__update_mediafile_information(
-                mediafile, md5sum, key, mimetype, exif_data
+                mediafile, md5sum, key, mimetype, exif_data, phash
             )
             mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
             download_url = urlparse(mediafile["original_file_location"])
