@@ -41,6 +41,7 @@ class S3StorageManager:
         self.headers = None
         self.session = requests.Session()
         self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
+        self.phash_max_distance = int(os.getenv("PHASH_MAX_DISTANCE", 5))
 
     def set_headers(self, headers):
         self.headers = headers
@@ -122,7 +123,7 @@ class S3StorageManager:
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
         )
 
-    def __handle_similar_image(self, new_file_obj, new_key, existing_key, ticket):
+    def __handle_similar_image(self, mediafile_id, new_file_obj, new_key, existing_key, ticket):
         bucket = self.__get_bucket_name(ticket)
         client = self.s3.Bucket(bucket).meta.client
         existing_mediafile_id = existing_key.split("-", 1)[0]
@@ -137,18 +138,26 @@ class S3StorageManager:
         existing_size = existing_img.width * existing_img.height
 
         if new_px > existing_size:
-            self.s3.Bucket(bucket).Object(existing_key).delete()
+            client.delete_object(Bucket=bucket, Key=existing_key)
             self.session.delete(f"{self.collection_api_url}/mediafiles/{existing_mediafile_id}")
             app.logger.warning(
                 f"Deleted lower-resolution image {existing_key}  in favor of newer image {new_key}")
             new_file_obj.seek(0)
             return
         else:
-            msg = (
-                f"Aborting upload: existing image {existing_key} ({existing_size}px) "
-                f"is at least as large as new {new_key} ({new_px}px)."
-            )
-            raise SimilarImageException(msg)
+            try:
+                client.delete_object(Bucket=bucket, Key=new_key)
+                self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
+
+            except Exception as ex:
+                app.logger.warning(f"Failed to cleanup partial object {new_key}: {ex}")
+
+            finally:
+                msg = (
+                    f"Aborting upload: existing image {existing_key} has the same or a higher resolution "
+                    f"than the newer image {new_key}."
+                )
+                raise SimilarImageException(msg)
 
     def __signal_file_uploaded(
         self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None
@@ -388,12 +397,18 @@ class S3StorageManager:
     def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
+<<<<<<< HEAD
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
         if int(os.getenv("ENABLE_P_HASH", "1")) == 1:
+=======
+        if int(os.getenv("ENABLE_P_HASH", 0)) == 1:
+>>>>>>> 2d01fd9 (Refs #143263 - Added perceptual hashing to upload endpoint)
             phash = self.__calculate_phash(file, key)
         else:
             phash = None
+
+        key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
 
         mimetype = self.__get_file_mimetype(file, key)
         exif_data = (
@@ -409,13 +424,13 @@ class S3StorageManager:
                 self.__handle_duplicate_file(
                     mediafile, mimetype, ex.md5sum, ex.filename, ex.message
                 )
-        key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
 
         if phash:
             try:
-                existing_key = self.check_similar_images(phash, ticket, max_distance=8)
+                existing_key = self.check_similar_images(phash, ticket, max_distance=self.phash_max_distance)
                 if existing_key:
                     self.__handle_similar_image(
+                        mediafile_id=mediafile_id,
                         new_file_obj=file,
                         new_key=key,
                         existing_key=existing_key,
@@ -424,7 +439,7 @@ class S3StorageManager:
             except SimilarImageException as ex:
                 app.logger.warning(str(ex))
                 file.seek(0)
-                return
+                raise
 
         extra = {}
         if phash:
