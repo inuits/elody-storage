@@ -397,13 +397,10 @@ class S3StorageManager:
     def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
         mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
         md5sum = self.__calculate_md5(file)
-<<<<<<< HEAD
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
-        if int(os.getenv("ENABLE_P_HASH", "1")) == 1:
-=======
+        
         if int(os.getenv("ENABLE_P_HASH", 0)) == 1:
->>>>>>> 2d01fd9 (Refs #143263 - Added perceptual hashing to upload endpoint)
             phash = self.__calculate_phash(file, key)
         else:
             phash = None
