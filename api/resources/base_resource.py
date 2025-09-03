@@ -146,6 +146,12 @@ class BaseResource(Resource):
         job_id = None
         file = None
         try:
+            if not (mediafile_id := request.args.get("id")) and not ticket:
+                raise NotFoundException(
+                    f"{get_error_code(ErrorCode.PROVIDE_MEDIAFILE_ID_OR_TICKET_ID, get_write())} Provide either a mediafile ID or a ticket ID"
+                )
+            if not mediafile_id and "mediafile_id" in ticket:
+                mediafile_id = ticket.get("mediafile_id")
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file)
             job_id = init_job(
@@ -154,14 +160,9 @@ class BaseResource(Resource):
                 get_rabbit=lambda: rabbit,
                 user_email=user,
                 parent_id=parent_job_id,
+                id_of_document_job_was_initiated_for=mediafile_id,
             )
             start_job(job_id, get_rabbit=lambda: rabbit)
-            if not (mediafile_id := request.args.get("id")) and not ticket:
-                raise NotFoundException(
-                    f"{get_error_code(ErrorCode.PROVIDE_MEDIAFILE_ID_OR_TICKET_ID, get_write())} Provide either a mediafile ID or a ticket ID"
-                )
-            if not mediafile_id and "mediafile_id" in ticket:
-                mediafile_id = ticket.get("mediafile_id")
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key, ticket)
             else:
