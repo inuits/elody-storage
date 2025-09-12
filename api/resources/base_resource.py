@@ -154,6 +154,7 @@ class BaseResource(Resource):
                 mediafile_id = ticket.get("mediafile_id")
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file)
+            parent_job_id = request.view_args.get("parent_job_id") or parent_job_id
             job_id = init_job(
                 f"Upload {key}{' transcode' if transcode else ''}",
                 "File upload",
