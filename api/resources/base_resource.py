@@ -23,6 +23,9 @@ from werkzeug.datastructures import Headers
 class BaseResource(Resource):
     def __init__(self):
         self.auth_headers = self.__get_auth_headers()
+        user_header = request.headers.get('X-User-Email')
+        if user_header:
+            self.auth_headers["X-User-Email"] = user_header
         self.storage = StorageManager().get_storage_engine(self.auth_headers)
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
 
@@ -139,10 +142,14 @@ class BaseResource(Resource):
         self, key=None, transcode=False, ticket=None, parent_job_id=None, user=None
     ):
         if not user:
-            try:
-                user = get_user_context().email or "default_uploader"
-            except NoUserContextException:
-                user = "default_uploader"
+            user_header = request.headers.get('X-User-Email')
+            if user_header:
+                user = user_header
+            else:
+                try:
+                    user = get_user_context().email or "default_uploader"
+                except NoUserContextException:
+                    user = "default_uploader"
         job_id = None
         file = None
         try:
