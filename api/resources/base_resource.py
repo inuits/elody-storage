@@ -188,3 +188,17 @@ class BaseResource(Resource):
                 file.close()
         finish_job(job_id, get_rabbit=lambda: rabbit)
         return "", 201
+
+    def get_user_from_request_and_ticket(self, request, ticket=None):
+        user = (
+                request.args.get("user_email")
+                or request.headers.get("X-User-Email")
+                or (
+                    (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
+                    if ticket is not None else None
+                )
+                or None
+        )
+        if user:
+            self.auth_headers["X-User-Email"] = user
+        return user

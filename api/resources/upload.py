@@ -9,14 +9,7 @@ class Upload(BaseResource):
     @policy_factory.authenticate(RequestContext(request))
     def post(self):
         parent_job_id = request.args.get("parent_job_id")
-        user = (
-            request.args.get("user_email")
-            or request.headers.get("X-User-Email")
-            or (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
-            or None
-        )
-        if user:
-            self.auth_headers["X-User-Email"] = user
+        user = self.get_user_from_request_and_ticket(request)
         return self._handle_file_upload(parent_job_id=parent_job_id, user=user)
 
 
@@ -25,17 +18,10 @@ class UploadWithTicket(BaseResource):
         try:
             ticket = self._get_ticket(request.args.get("ticket_id"))
             parent_job_id = request.args.get("parent_job_id")
-            user = (
-                request.args.get("user_email")
-                or request.headers.get("X-User-Email")
-                or (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
-                or None
-            )
+            user = self.get_user_from_request_and_ticket(request, ticket)
         except Exception as ex:
             return str(ex), 400
-        
-        if user:
-            self.auth_headers["X-User-Email"] = user
+
         return self._handle_file_upload(
             ticket=ticket, parent_job_id=parent_job_id, user=user
         )
@@ -45,14 +31,7 @@ class UploadKey(BaseResource):
     @policy_factory.authenticate(RequestContext(request))
     def post(self, key):
         parent_job_id = request.args.get("parent_job_id")
-        user = (
-            request.args.get("user_email")
-            or request.headers.get("X-User-Email")
-            or (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
-            or None
-        )
-        if user:
-            self.auth_headers["X-User-Email"] = user
+        user = self.get_user_from_request_and_ticket(request)
         return self._handle_file_upload(key=key, parent_job_id=parent_job_id, user=user)
 
 
@@ -61,16 +40,10 @@ class UploadKeyWithTicket(BaseResource):
         try:
             ticket = self._get_ticket(request.args.get("ticket_id"))
             parent_job_id = request.args.get("parent_job_id")
-            user = (
-                request.args.get("user_email")
-                or request.headers.get("X-User-Email")
-                or (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
-                or None
-            )
+            user = self.get_user_from_request_and_ticket(request, ticket)
         except Exception as ex:
             return str(ex), 400
-        if user:
-            self.auth_headers["X-User-Email"] = user
+
         return self._handle_file_upload(
             key=key, ticket=ticket, parent_job_id=parent_job_id, user=user
         )
@@ -82,12 +55,7 @@ class UploadTranscode(BaseResource):
         try:
             ticket_id = request.args.get("ticket_id")
             parent_job_id = request.args.get("parent_job_id")
-            user = (
-                request.args.get("user_email")
-                or request.headers.get("X-User-Email")
-                or (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
-                or None
-            )
+            user = self.get_user_from_request_and_ticket(request)
             if ticket_id:
                 ticket = self._get_ticket(ticket_id)
                 return self._handle_file_upload(
