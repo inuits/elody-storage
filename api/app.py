@@ -5,6 +5,7 @@ import secrets
 
 from elody.loader import load_apps, load_policies
 from elody.util import CustomJSONEncoder, custom_json_dumps
+from rabbit import init_rabbit, get_rabbit
 from flask import Flask, g
 from flask_cors import CORS
 from flask_restful import Api
@@ -51,46 +52,47 @@ ExchangeParams = (
     if amqp_module.__name__ == "amqpstorm_flask"
     else amqp_module.ExchangeParams.ExchangeParams
 )
-rabbit = amqp_module.RabbitMQ(
-    exchange_params=ExchangeParams(
-        auto_delete=os.getenv("AUTO_DELETE_EXCHANGE", False)
-        in [
-            1,
-            "1",
-            True,
-            "True",
-            "true",
-        ],
-        passive=os.getenv("PASSIVE_EXCHANGE", False)
-        in [
-            1,
-            "1",
-            "True",
-            "true",
-            True,
-        ],
-        durable=os.getenv("DURABLE_EXCHANGE", False)
-        in [
-            1,
-            "1",
-            "True",
-            "true",
-            True,
-        ],
-    )
-)
-if amqp_module.__name__ == "amqpstorm_flask":
-    rabbit.init_app(
-        app, "basic", json.loads, custom_json_dumps, json_encoder=CustomJSONEncoder
-    )
-else:
-    rabbit.init_app(app, "basic", json.loads, custom_json_dumps)
+init_rabbit(app)
+# rabbit = amqp_module.RabbitMQ(
+#     exchange_params=ExchangeParams(
+#         auto_delete=os.getenv("AUTO_DELETE_EXCHANGE", False)
+#         in [
+#             1,
+#             "1",
+#             True,
+#             "True",
+#             "true",
+#         ],
+#         passive=os.getenv("PASSIVE_EXCHANGE", False)
+#         in [
+#             1,
+#             "1",
+#             "True",
+#             "true",
+#             True,
+#         ],
+#         durable=os.getenv("DURABLE_EXCHANGE", False)
+#         in [
+#             1,
+#             "1",
+#             "True",
+#             "true",
+#             True,
+#         ],
+#     )
+# )
+# if amqp_module.__name__ == "amqpstorm_flask":
+#     rabbit.init_app(
+#         app, "basic", json.loads, custom_json_dumps, json_encoder=CustomJSONEncoder
+#     )
+# else:
+#     rabbit.init_app(app, "basic", json.loads, custom_json_dumps)
 
 app.register_blueprint(swaggerui_blueprint)
 
 
 def rabbit_available():
-    connection = rabbit.get_connection()
+    connection = get_rabbit().get_connection()
     if connection.is_open:
         return True, "Successfully reached RabbitMQ"
     return False, "Failed to reach RabbitMQ"

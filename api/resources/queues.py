@@ -1,4 +1,5 @@
-from app import logger, rabbit
+from app import logger
+from rabbit import get_rabbit
 from storage.storagemanager import StorageManager
 
 
@@ -9,7 +10,7 @@ def __is_malformed_message(data, fields):
     return False
 
 
-@rabbit.queue(["dams.file_uploaded", "dams.mediafile_changed"])
+@get_rabbit().queue(["dams.file_uploaded", "dams.mediafile_changed"])
 def add_exif_data_to_image(routing_key, body, message_id):
     data = body["data"]
     required = ["mediafile"]
@@ -27,7 +28,7 @@ def add_exif_data_to_image(routing_key, body, message_id):
     # storage.add_exif_data(mediafile)
 
 
-@rabbit.queue("dams.file_scanned")
+@get_rabbit().queue("dams.file_scanned")
 def remove_infected_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile_id", "clamav_version", "infected"]):
@@ -36,7 +37,7 @@ def remove_infected_file_from_storage(routing_key, body, message_id):
         StorageManager().get_storage_engine().delete_files([data["filename"]])
 
 
-@rabbit.queue("dams.mediafile_deleted")
+@get_rabbit().queue("dams.mediafile_deleted")
 def remove_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile", "linked_entities"]):

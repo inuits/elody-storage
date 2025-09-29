@@ -4,7 +4,8 @@ import requests
 import shutil
 import tempfile
 
-from app import get_user_context, rabbit
+from app import get_user_context
+from rabbit import get_rabbit
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
@@ -165,12 +166,12 @@ class BaseResource(Resource):
             job_id = init_job(
                 f"Upload {key}{' transcode' if transcode else ''}",
                 "File upload",
-                get_rabbit=lambda: rabbit,
+                get_rabbit=get_rabbit,
                 user_email=user,
                 parent_id=parent_job_id,
                 id_of_document_job_was_initiated_for=mediafile_id,
             )
-            start_job(job_id, get_rabbit=lambda: rabbit)
+            start_job(job_id, get_rabbit=get_rabbit)
             if transcode:
                 self.storage.upload_transcode(file, mediafile_id, key, ticket)
             else:
@@ -181,12 +182,12 @@ class BaseResource(Resource):
             if file:
                 file.close()
             if job_id:
-                fail_job(job_id, str(ex), get_rabbit=lambda: rabbit)
+                fail_job(job_id, str(ex), get_rabbit=get_rabbit)
             return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
         finally:
             if file:
                 file.close()
-        finish_job(job_id, get_rabbit=lambda: rabbit)
+        finish_job(job_id, get_rabbit=get_rabbit)
         return "", 201
 
     def get_user_from_request_and_ticket(self, request, ticket=None):

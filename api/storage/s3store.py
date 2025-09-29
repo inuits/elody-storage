@@ -6,6 +6,7 @@ import magic
 import os
 import re
 import requests
+from rabbit import get_rabbit
 
 from botocore.exceptions import ClientError
 from cloudevents.conversion import to_dict
@@ -114,7 +115,7 @@ class S3StorageManager:
             "parent_job_id": parent_job_id,
         }
         event = to_dict(CloudEvent(attributes, data))
-        app.rabbit.send(event, routing_key="dams.file_uploaded")
+        get_rabbit().send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(
         self, mediafile, md5sum, new_key, mimetype, exif_data=None
