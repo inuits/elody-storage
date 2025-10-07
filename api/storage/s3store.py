@@ -37,6 +37,7 @@ class S3StorageManager:
         self.headers = None
         self.session = requests.Session()
         self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
+        Image.MAX_IMAGE_PIXELS = 300000000
 
     def set_headers(self, headers):
         self.headers = headers
@@ -377,6 +378,10 @@ class S3StorageManager:
             self.session.post(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
                 json=data,
+            )
+            self.session.patch(
+                f"{self.collection_api_url}/mediafiles/{mediafile_id}",
+                json={"transcode_filename": key}
             )
         except Exception as ex:
             raise Exception(str(ex))
