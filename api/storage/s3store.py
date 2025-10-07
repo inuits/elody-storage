@@ -381,7 +381,7 @@ class S3StorageManager:
             )
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-                json={"transcode_filename": key}
+                json={"transcode_filename": key},
             )
         except Exception as ex:
             raise Exception(str(ex))

@@ -24,7 +24,7 @@ from werkzeug.datastructures import Headers
 class BaseResource(Resource):
     def __init__(self):
         self.auth_headers = self.__get_auth_headers()
-        user_header = request.headers.get('X-User-Email')
+        user_header = request.headers.get("X-User-Email")
         if user_header:
             self.auth_headers["X-User-Email"] = user_header
         self.storage = StorageManager().get_storage_engine(self.auth_headers)
@@ -143,7 +143,7 @@ class BaseResource(Resource):
         self, key=None, transcode=False, ticket=None, parent_job_id=None, user=None
     ):
         if not user:
-            user_header = request.headers.get('X-User-Email')
+            user_header = request.headers.get("X-User-Email")
             if user_header:
                 user = user_header
             else:
@@ -192,13 +192,18 @@ class BaseResource(Resource):
 
     def get_user_from_request_and_ticket(self, request, ticket=None):
         user = (
-                request.args.get("user_email")
-                or request.headers.get("X-User-Email")
-                or (
-                    (ticket.get("user") if isinstance(ticket, dict) else getattr(ticket, "user", None))
-                    if ticket is not None else None
+            request.args.get("user_email")
+            or request.headers.get("X-User-Email")
+            or (
+                (
+                    ticket.get("user")
+                    if isinstance(ticket, dict)
+                    else getattr(ticket, "user", None)
                 )
-                or None
+                if ticket is not None
+                else None
+            )
+            or None
         )
         if user:
             self.auth_headers["X-User-Email"] = user
