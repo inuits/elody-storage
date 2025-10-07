@@ -1,6 +1,9 @@
 from app import logger
 from rabbit import get_rabbit
 from storage.storagemanager import StorageManager
+from os import getenv
+
+queue_type = getenv("QUEUE_TYPE", "classic")
 
 
 def __is_malformed_message(data, fields):
@@ -10,7 +13,21 @@ def __is_malformed_message(data, fields):
     return False
 
 
-@get_rabbit().queue(["dams.file_uploaded", "dams.mediafile_changed"])
+def __argument_wrapper(*, queue_name, routing_key):
+    arguments = {"routing_key": routing_key}
+    if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
+        arguments["queue_name"] = queue_name
+        if queue_type:
+            arguments["queue_arguments"] = {"x-queue-type": queue_type}
+    return arguments
+
+
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.add.exif.data.to.image",
+        routing_key=["dams.file_uploaded", "dams.mediafile_changed"],
+    )
+)
 def add_exif_data_to_image(routing_key, body, message_id):
     data = body["data"]
     required = ["mediafile"]
@@ -28,7 +45,12 @@ def add_exif_data_to_image(routing_key, body, message_id):
     # storage.add_exif_data(mediafile)
 
 
-@get_rabbit().queue("dams.file_scanned")
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.remove.infected.file.from.storage",
+        routing_key="dams.file_scanned",
+    )
+)
 def remove_infected_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile_id", "clamav_version", "infected"]):
@@ -37,7 +59,12 @@ def remove_infected_file_from_storage(routing_key, body, message_id):
         StorageManager().get_storage_engine().delete_files([data["filename"]])
 
 
-@get_rabbit().queue("dams.mediafile_deleted")
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.remove.file.from.storage",
+        routing_key="dams.mediafile_deleted",
+    )
+)
 def remove_file_from_storage(routing_key, body, message_id):
     data = body["data"]
     if __is_malformed_message(data, ["mediafile", "linked_entities"]):
