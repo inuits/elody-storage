@@ -140,7 +140,13 @@ class BaseResource(Resource):
         )
 
     def _handle_file_upload(
-        self, key=None, transcode=False, ticket=None, parent_job_id=None, user=None
+        self,
+        key=None,
+        transcode=False,
+        ticket=None,
+        parent_job_id=None,
+        user=None,
+        ignore_duplicate_check=False,
     ):
         if not user:
             user_header = request.headers.get("X-User-Email")
@@ -173,7 +179,9 @@ class BaseResource(Resource):
             )
             start_job(job_id, get_rabbit=get_rabbit)
             if transcode:
-                self.storage.upload_transcode(file, mediafile_id, key, ticket)
+                self.storage.upload_transcode(
+                    file, mediafile_id, key, ticket, ignore_duplicate_check
+                )
             else:
                 self.storage.upload_file(
                     file, mediafile_id, key, ticket, parent_job_id=parent_job_id

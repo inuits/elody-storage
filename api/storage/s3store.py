@@ -137,10 +137,19 @@ class S3StorageManager:
             self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
             message = f"{message} Existing mediafile for file found, deleting new one."
         if self.is_metadata_updated(found_mediafile, mediafile):
+            # NOTE: So this currently means the last seen filename is used.
             message = f"{message} Metadata not up-to-date, updating."
             payload = {"metadata": mediafile.get("metadata", [])}
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
+            )
+        if self.are_relations_updated(found_mediafile, mediafile):
+            message = f"{message} Relations not up-to-date, updating."
+            relations_payload = {
+                "relations": self.get_relations_payload(found_mediafile, mediafile),
+            }
+            self.session.patch(
+                f"{self.collection_api_url}/mediafiles/{md5sum}", json=relations_payload
             )
         raise DuplicateFileException(
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
@@ -295,6 +304,31 @@ class S3StorageManager:
                 return True
         return len(unmatched) > 0
 
+    def are_relations_updated(self, old_mediafile, new_mediafile):
+        old_relations = old_mediafile.get("relations", [])
+        new_relations = new_mediafile.get("relations", [])
+        if len(old_relations) != len(new_relations):
+            return True
+        unmatched = list(old_relations)
+        for item in new_relations:
+            try:
+                unmatched.remove(item)
+            except ValueError:
+                return True
+        return len(unmatched) > 0
+
+    def get_relations_payload(self, old_mediafile, new_mediafile):
+        old_relations = old_mediafile.get("relations", [])
+        new_relations = new_mediafile.get("relations", [])
+        unmatched = list(old_relations)
+        for item in new_relations:
+            try:
+                unmatched.remove(item)
+            except ValueError:
+                continue
+
+        return new_relations + unmatched
+
     def __get_bucket_name(self, ticket=None):
         if ticket:
             return ticket["bucket"]
@@ -406,18 +440,28 @@ class S3StorageManager:
                 parent_job_id,
             )
 
-    def upload_transcode(self, file, mediafile_id, key, ticket):
-        mediafile = self._get_mediafile(mediafile_id)
+    def upload_transcode(
+        self,
+        file,
+        mediafile_id,
+        key,
+        ticket,
+        ignore_duplicate_check: bool = False,
+    ):
         md5sum = self.__calculate_md5(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
         mimetype = self.__get_file_mimetype(file, key)
-        self.check_file_exists(key, md5sum)
-        self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
-            Fileobj=file, Key=key
-        )
-        mediafile["identifiers"].append(md5sum)
+        try:
+            self.check_file_exists(key, md5sum)
+            self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
+                Fileobj=file, Key=key
+            )
+        except DuplicateFileException as ex:
+            if not ignore_duplicate_check:
+                raise ex
+
         new_key = key.split("/")[-1]
         original_filename = self.__get_filename_from_key(key)
 

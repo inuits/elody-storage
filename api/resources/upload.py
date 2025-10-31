@@ -55,6 +55,9 @@ class UploadTranscode(BaseResource):
         try:
             ticket_id = request.args.get("ticket_id")
             parent_job_id = request.args.get("parent_job_id")
+            ignore_duplicate_check = bool(
+                request.args.get("ignore_duplicate_check", False)
+            )
             user = self.get_user_from_request_and_ticket(request)
             if ticket_id:
                 ticket = self._get_ticket(ticket_id)
@@ -63,10 +66,14 @@ class UploadTranscode(BaseResource):
                     ticket=ticket,
                     parent_job_id=parent_job_id,
                     user=user,
+                    ignore_duplicate_check=ignore_duplicate_check,
                 )
             else:
                 return self._handle_file_upload(
-                    transcode=True, parent_job_id=parent_job_id, user=user
+                    transcode=True,
+                    parent_job_id=parent_job_id,
+                    user=user,
+                    ignore_duplicate_check=ignore_duplicate_check,
                 )
         except Exception as ex:
             return str(ex), 400
