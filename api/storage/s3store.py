@@ -52,6 +52,22 @@ class S3StorageManager:
         file.seek(0)
         return hash_obj.hexdigest()
 
+    def __convert_filesize(self, filesize_bytes):
+        si_sufffixes = {
+            0: "B",
+            1: "KB",
+            2: "MB",
+            3: "GB",
+            4: "TB",
+            5: "PB",
+        }
+        counter = 0
+
+        while 1 << 10 < filesize_bytes and counter < 5:
+            filesize_bytes = filesize_bytes / (1 << 10)
+            counter += 1
+        return f"{round(filesize_bytes, 2)} {si_sufffixes[counter]}"
+
     def __get_filesize(self, file):
         # NOTE: This function currently divides by 1024 for each step in the
         # conversion. According to the internet that's how windows calculates
@@ -59,23 +75,10 @@ class S3StorageManager:
         # that shows as 2.0 mb on linux is calculated as being 1.99 MB
         original_file_position = file.tell()
         try:
-            si_sufffixes = {
-                0: "B",
-                1: "KB",
-                2: "MB",
-                3: "GB",
-                4: "TB",
-                5: "PB",
-            }
             file.seek(0, os.SEEK_END)
             filesize_bytes = file.tell()
+            return self.__convert_filesize(filesize_bytes)
 
-            counter = 0
-
-            while 1 << 10 < filesize_bytes and counter < 5:
-                filesize_bytes = filesize_bytes / (1 << 10)
-                counter += 1
-            return f"{round(filesize_bytes, 2)} {si_sufffixes[counter]}"
         except (io.UnsupportedOperation, AttributeError):
             return None
         finally:
