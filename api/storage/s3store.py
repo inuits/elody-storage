@@ -52,6 +52,32 @@ class S3StorageManager:
         file.seek(0)
         return hash_obj.hexdigest()
 
+    def __get_filesize(self, file):
+        # This realistically won't go above GB
+        original_file_position = file.tell()
+        try:
+            si_sufffixes = {
+                0: "B",
+                1: "KB",
+                2: "MB",
+                3: "GB",
+                4: "TB",
+                5: "PB",
+            }
+            file.seek(0, os.SEEK_END)
+            filesize_bytes = file.tell()
+
+            counter = 0
+
+            while 1 << 10 < filesize_bytes and counter < 5:
+                filesize_bytes = filesize_bytes / (1 << 10)
+                counter += 1
+            return f"{round(filesize_bytes, 2)} {si_sufffixes[counter]}"
+        except (io.UnsupportedOperation, AttributeError):
+            return None
+        finally:
+            file.seek(original_file_position)
+
     def __get_exif_for_mediafile(self, mediafile):
         artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
         if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
@@ -324,6 +350,7 @@ class S3StorageManager:
         mediafile["file_creation_date"] = self._check_keys_and_extract_creation_dates(
             exif_data
         )
+        mediafile["filesize"] = self.__get_filesize(file)
         try:
             self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
@@ -353,6 +380,7 @@ class S3StorageManager:
     def upload_transcode(self, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
+        filesize = self.__get_filesize(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
@@ -373,6 +401,7 @@ class S3StorageManager:
             "original_filename": original_filename,
             "technical_origin": "transcode",
             "mimetype": mimetype,
+            "filesize": filesize,
         }
         try:
             self.session.post(
