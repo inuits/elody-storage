@@ -162,7 +162,12 @@ class S3StorageManager:
         get_rabbit().send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(
-        self, mediafile, md5sum, new_key, mimetype, exif_data=None,
+        self,
+        mediafile,
+        md5sum,
+        new_key,
+        mimetype,
+        exif_data=None,
     ):
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
@@ -379,11 +384,17 @@ class S3StorageManager:
             Fileobj=file, Key=key
         )
         if mediafile:
-            self.__update_mediafile_information(
-                mediafile, md5sum, key, mimetype, exif_data,
-            )
             bucket = ticket.get("bucket")
-            mediafile["filesize"] = self.__get_filesize_s3(key, bucket) or self.__get_filesize(file)
+            mediafile["filesize"] = self.__get_filesize_s3(
+                key, bucket
+            ) or self.__get_filesize(file)
+            self.__update_mediafile_information(
+                mediafile,
+                md5sum,
+                key,
+                mimetype,
+                exif_data,
+            )
             mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
             download_url = urlparse(mediafile["original_file_location"])
             self.__signal_file_uploaded(
@@ -420,7 +431,9 @@ class S3StorageManager:
             "mimetype": mimetype,
         }
         bucket = self.__get_bucket_name(ticket)
-        data["filesize"] = self.__get_filesize_s3(key, bucket) or self.__get_filesize(file)
+        data["filesize"] = self.__get_filesize_s3(key, bucket) or self.__get_filesize(
+            file
+        )
         try:
             self.session.post(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
