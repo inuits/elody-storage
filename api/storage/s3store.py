@@ -53,6 +53,10 @@ class S3StorageManager:
         return hash_obj.hexdigest()
 
     def __convert_filesize(self, filesize_bytes):
+        # NOTE: This function currently divides by 1024 for each step in the
+        # conversion. According to the internet that's how windows calculates
+        # it, but that does seem to be a mismatch on linux. For example, a file
+        # that shows as 2.0 mb on linux is calculated as being 1.99 MB
         si_sufffixes = {
             0: "B",
             1: "KB",
@@ -69,10 +73,6 @@ class S3StorageManager:
         return f"{round(filesize_bytes, 2)} {si_sufffixes[counter]}"
 
     def __get_filesize(self, file):
-        # NOTE: This function currently divides by 1024 for each step in the
-        # conversion. According to the internet that's how windows calculates
-        # it, but that does seem to be a mismatch on linux. For example, a file
-        # that shows as 2.0 mb on linux is calculated as being 1.99 MB
         original_file_position = file.tell()
         try:
             file.seek(0, os.SEEK_END)
@@ -83,6 +83,17 @@ class S3StorageManager:
             return None
         finally:
             file.seek(original_file_position)
+
+    def __get_filesize_s3(self, key, bucket):
+        try:
+            file_headers = self.s3.Bucket(bucket).meta.client.head_object(
+                Bucket=bucket, Key=key
+            )
+            if filesize_bytes := file_headers.get("ContentLength"):
+                return self.__convert_filesize(filesize_bytes)
+            return None
+        except:
+            return None
 
     def __get_exif_for_mediafile(self, mediafile):
         artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
@@ -151,8 +162,11 @@ class S3StorageManager:
         get_rabbit().send(event, routing_key="dams.file_uploaded")
 
     def __update_mediafile_information(
-        self, mediafile, md5sum, new_key, mimetype, exif_data=None
+        self, mediafile, md5sum, new_key, mimetype, exif_data=None, ticket=None
     ):
+        if ticket:
+            bucket = ticket.get("bucket")
+            mediafile["filesize"] = self.__get_filesize_s3(new_key, bucket)
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
         mediafile["md5sum"] = md5sum
@@ -356,7 +370,6 @@ class S3StorageManager:
         mediafile["file_creation_date"] = self._check_keys_and_extract_creation_dates(
             exif_data
         )
-        mediafile["filesize"] = self.__get_filesize(file)
         try:
             self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
@@ -370,7 +383,7 @@ class S3StorageManager:
         )
         if mediafile:
             self.__update_mediafile_information(
-                mediafile, md5sum, key, mimetype, exif_data
+                mediafile, md5sum, key, mimetype, exif_data, ticket=ticket
             )
             mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
             download_url = urlparse(mediafile["original_file_location"])
@@ -386,7 +399,6 @@ class S3StorageManager:
     def upload_transcode(self, file, mediafile_id, key, ticket):
         mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
-        filesize = self.__get_filesize(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
@@ -407,8 +419,9 @@ class S3StorageManager:
             "original_filename": original_filename,
             "technical_origin": "transcode",
             "mimetype": mimetype,
-            "filesize": filesize,
         }
+        bucket = self.__get_bucket_name(ticket)
+        data["filesize"] = self.__get_filesize_s3(key, bucket)
         try:
             self.session.post(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
