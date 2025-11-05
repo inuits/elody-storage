@@ -53,7 +53,10 @@ class S3StorageManager:
         return hash_obj.hexdigest()
 
     def __get_filesize(self, file):
-        # This realistically won't go above GB
+        # NOTE: This function currently divides by 1024 for each step in the
+        # conversion. According to the internet that's how windows calculates
+        # it, but that does seem to be a mismatch on linux. For example, a file
+        # that shows as 2.0 mb on linux is calculated as being 1.99 MB
         original_file_position = file.tell()
         try:
             si_sufffixes = {
