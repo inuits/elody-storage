@@ -164,7 +164,7 @@ class BaseResource(Resource):
             key = self.__get_key_for_file(key, file)
             parent_job_id = request.view_args.get("parent_job_id") or parent_job_id
             job_id = init_job(
-                f"Upload {key}{' transcode' if transcode else ''}",
+                f"Upload {'transcode of ' if transcode else ''}{key}",
                 "File upload",
                 get_rabbit=get_rabbit,
                 user_email=user,
