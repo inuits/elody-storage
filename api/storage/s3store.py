@@ -23,6 +23,12 @@ from humanfriendly import parse_size
 from PIL import Image, ExifTags, TiffImagePlugin
 from urllib.parse import urlparse
 
+NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in [
+    "true",
+    "True",
+    True,
+]
+
 
 class S3StorageManager:
     def __init__(self):
@@ -143,7 +149,10 @@ class S3StorageManager:
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
             )
-        if self.are_relations_updated(found_mediafile, mediafile):
+        if (
+            self.are_relations_updated(found_mediafile, mediafile)
+            and NEW_STORAGE_ENABLED
+        ):
             message = f"{message} Relations not up-to-date, updating."
             relations_payload = {
                 "relations": self.get_relations_payload(found_mediafile, mediafile),
@@ -459,7 +468,7 @@ class S3StorageManager:
                 Fileobj=file, Key=key
             )
         except DuplicateFileException as ex:
-            if not ignore_duplicate_check:
+            if not ignore_duplicate_check or not NEW_STORAGE_ENABLED:
                 raise ex
 
         new_key = key.split("/")[-1]
