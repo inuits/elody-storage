@@ -216,7 +216,7 @@ class S3StorageManager:
             return None
         elif req.status_code == 404:
             raise NotFoundException(
-                f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Could not get mediafile with provided id"
+                f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Could not get mediafile with provided id '{mediafile_id}'"
             )
         else:
             raise Exception(
@@ -404,7 +404,7 @@ class S3StorageManager:
         return None
 
     def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
-        mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
+        mediafile = self._get_mediafile(mediafile_id)
         md5sum = self.__calculate_md5(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
@@ -438,7 +438,7 @@ class S3StorageManager:
                 mimetype,
                 exif_data,
             )
-            mediafile = self._get_mediafile(mediafile_id, fatal=ticket is None)
+            mediafile = self._get_mediafile(mediafile_id)
             download_url = urlparse(mediafile["original_file_location"])
             self.__signal_file_uploaded(
                 mediafile,
