@@ -43,6 +43,8 @@ class S3StorageManager:
         self.headers = None
         self.session = requests.Session()
         self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
+        self.access_control_list = (os.getenv("ACCESS_CONTROL_TYPE") or "").lower().strip().split(",")
+        self.access_control_type = os.getenv("ACCESS_CONTROL_TYPE", "deny").lower()
         Image.MAX_IMAGE_PIXELS = 300000000
 
     def set_headers(self, headers):
@@ -116,6 +118,7 @@ class S3StorageManager:
         file.seek(0)
         if mime == "application/octet-stream":
             mime = get_mimetype_from_filename(key)
+        self.__valiate_mimetype_access_control(mime)
         return mime
 
     def __get_item_metadata_value(self, item, key):
@@ -163,6 +166,15 @@ class S3StorageManager:
         raise DuplicateFileException(
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
         )
+
+    def __valiate_mimetype_access_control(self, mimetype):
+        has_access_control = False
+        if self.access_control_type == "allow":
+            has_access_control = mimetype in self.access_control_list
+        elif self.access_control_type == "deny":
+            has_access_control = mimetype not in self.access_control_list
+        if not has_access_control:
+            raise Exception(f"File mimetype {mimetype} is not allowed.")
 
     def __signal_file_uploaded(
         self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None
