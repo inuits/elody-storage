@@ -43,7 +43,7 @@ class S3StorageManager:
         self.headers = None
         self.session = requests.Session()
         self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
-        self.access_control_list = (os.getenv("ACCESS_CONTROL_TYPE") or "").lower().strip().split(",")
+        self.access_control_list = (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
         self.access_control_type = os.getenv("ACCESS_CONTROL_TYPE", "deny").lower()
         Image.MAX_IMAGE_PIXELS = 300000000
 
