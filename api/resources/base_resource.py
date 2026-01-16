@@ -1,4 +1,3 @@
-import traceback
 import os
 import re
 import requests
@@ -188,7 +187,6 @@ class BaseResource(Resource):
                     file, mediafile_id, key, ticket, parent_job_id=parent_job_id
                 )
         except (DuplicateFileException, Exception) as ex:
-            print(traceback.format_exc(), flush=True)
             if file:
                 file.close()
             if job_id:

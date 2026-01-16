@@ -1,4 +1,3 @@
-import traceback
 import app
 import boto3
 import hashlib
@@ -44,9 +43,7 @@ class S3StorageManager:
         self.headers = None
         self.session = requests.Session()
         self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
-        self.access_control_list = (
-            (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
-        )
+        self.access_control_list = (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
         self.access_control_type = os.getenv("ACCESS_CONTROL_TYPE", "deny").lower()
         Image.MAX_IMAGE_PIXELS = 300000000
 
@@ -512,7 +509,6 @@ class S3StorageManager:
                 json={"display_filename": key},
             )
         except Exception as ex:
-            print(traceback.format_exc(), flush=True)
             raise Exception(str(ex))
 
     def __get_filename_from_key(self, key):
