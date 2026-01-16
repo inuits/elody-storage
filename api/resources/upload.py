@@ -78,4 +78,5 @@ class UploadTranscode(BaseResource):
                     ignore_duplicate_check=ignore_duplicate_check,
                 )
         except Exception as ex:
+
             return str(ex), 400
