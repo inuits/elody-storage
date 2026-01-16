@@ -3,6 +3,7 @@ from flask import request
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 from storage.storagemanager import StorageManager
+import traceback
 
 
 class Upload(BaseResource):
@@ -42,6 +43,7 @@ class UploadKeyWithTicket(BaseResource):
             parent_job_id = request.args.get("parent_job_id")
             user = self.get_user_from_request_and_ticket(request, ticket)
         except Exception as ex:
+            print(traceback.format_exc(), flush=True)
             return str(ex), 400
 
         return self._handle_file_upload(
