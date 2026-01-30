@@ -43,7 +43,9 @@ class S3StorageManager:
         self.headers = None
         self.session = requests.Session()
         self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
-        self.access_control_list = (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
+        self.access_control_list = (
+            (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
+        )
         self.access_control_type = os.getenv("ACCESS_CONTROL_TYPE", "deny").lower()
         Image.MAX_IMAGE_PIXELS = 300000000
 
@@ -148,7 +150,7 @@ class S3StorageManager:
         if self.is_metadata_updated(found_mediafile, mediafile):
             # NOTE: So this currently means the last seen filename is used.
             message = f"{message} Metadata not up-to-date, updating."
-            payload = {"metadata": mediafile.get("metadata", [])}
+            payload = {"metadata": mediafile.get("metadata", []), "type": "mediafile"}
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
             )
@@ -159,6 +161,7 @@ class S3StorageManager:
             message = f"{message} Relations not up-to-date, updating."
             relations_payload = {
                 "relations": self.get_relations_payload(found_mediafile, mediafile),
+                "type": "mediafile",
             }
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=relations_payload
@@ -250,7 +253,7 @@ class S3StorageManager:
         )
         self.session.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
-            json={"exif": str(exif)},
+            json={"exif": str(exif), "type": "mediafile"},
         )
 
     def check_file_exists(self, filename, md5sum, ticket=None):
@@ -506,7 +509,7 @@ class S3StorageManager:
             )
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-                json={"display_filename": key},
+                json={"display_filename": key, "type": "mediafile"},
             )
         except Exception as ex:
             raise Exception(str(ex))
