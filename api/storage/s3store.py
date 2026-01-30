@@ -150,7 +150,11 @@ class S3StorageManager:
         if self.is_metadata_updated(found_mediafile, mediafile):
             # NOTE: So this currently means the last seen filename is used.
             message = f"{message} Metadata not up-to-date, updating."
-            payload = {"metadata": mediafile.get("metadata", []), "type": "mediafile"}
+            payload = {
+                "metadata": mediafile.get("metadata", []),
+                "schema": {"type": "elody"},
+                "type": "mediafile",
+            }
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
             )
@@ -161,6 +165,7 @@ class S3StorageManager:
             message = f"{message} Relations not up-to-date, updating."
             relations_payload = {
                 "relations": self.get_relations_payload(found_mediafile, mediafile),
+                "schema": {"type": "elody"},
                 "type": "mediafile",
             }
             self.session.patch(
@@ -253,7 +258,7 @@ class S3StorageManager:
         )
         self.session.patch(
             f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
-            json={"exif": str(exif), "type": "mediafile"},
+            json={"exif": str(exif), "schema": {"type": "elody"}, "type": "mediafile"},
         )
 
     def check_file_exists(self, filename, md5sum, ticket=None):
@@ -509,7 +514,11 @@ class S3StorageManager:
             )
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
-                json={"display_filename": key, "type": "mediafile"},
+                json={
+                    "display_filename": key,
+                    "schema": {"type": "elody"},
+                    "type": "mediafile",
+                },
             )
         except Exception as ex:
             raise Exception(str(ex))
