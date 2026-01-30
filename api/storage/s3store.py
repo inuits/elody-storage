@@ -163,13 +163,9 @@ class S3StorageManager:
             and NEW_STORAGE_ENABLED
         ):
             message = f"{message} Relations not up-to-date, updating."
-            relations_payload = {
-                "relations": self.get_relations_payload(found_mediafile, mediafile),
-                "schema": {"type": "elody"},
-                "type": "mediafile",
-            }
-            self.session.patch(
-                f"{self.collection_api_url}/mediafiles/{md5sum}", json=relations_payload
+            relations_payload = self.get_relations_payload(found_mediafile, mediafile)
+            self.session.put(
+                f"{self.collection_api_url}/mediafiles/{md5sum}/relations", json=relations_payload
             )
         raise DuplicateFileException(
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
