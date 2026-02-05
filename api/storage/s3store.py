@@ -165,7 +165,8 @@ class S3StorageManager:
             message = f"{message} Relations not up-to-date, updating."
             relations_payload = self.get_relations_payload(found_mediafile, mediafile)
             self.session.put(
-                f"{self.collection_api_url}/mediafiles/{md5sum}/relations", json=relations_payload
+                f"{self.collection_api_url}/mediafiles/{md5sum}/relations",
+                json=relations_payload,
             )
         raise DuplicateFileException(
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
@@ -317,42 +318,38 @@ class S3StorageManager:
         return stream.iter_chunks()
 
     def is_metadata_updated(self, old_mediafile, new_mediafile):
-        old_metadata = old_mediafile.get("metadata", [])
-        new_metadata = new_mediafile.get("metadata", [])
-        if len(old_metadata) != len(new_metadata):
-            return True
-        unmatched = list(old_metadata)
-        for item in new_metadata:
-            try:
-                unmatched.remove(item)
-            except ValueError:
-                return True
-        return len(unmatched) > 0
+        old_metadata = [
+            f"{metadata['key']}:{metadata['value']}"
+            for metadata in old_mediafile.get("metadata", [])
+        ]
+        new_metadata = [
+            f"{metadata['key']}:{metadata['value']}"
+            for metadata in new_mediafile.get("metadata", [])
+        ]
+        return bool(set(new_metadata) - set(old_metadata))
 
     def are_relations_updated(self, old_mediafile, new_mediafile):
-        old_relations = old_mediafile.get("relations", [])
-        new_relations = new_mediafile.get("relations", [])
-        if len(old_relations) != len(new_relations):
-            return True
-        unmatched = list(old_relations)
-        for item in new_relations:
-            try:
-                unmatched.remove(item)
-            except ValueError:
-                return True
-        return len(unmatched) > 0
+        old_relations = [
+            f"{relation['key']}:{relation['type']}"
+            for relation in old_mediafile.get("relations", [])
+        ]
+        new_relations = [
+            f"{relation['key']}:{relation['type']}"
+            for relation in new_mediafile.get("relations", [])
+        ]
+        return bool(set(new_relations) - set(old_relations))
 
     def get_relations_payload(self, old_mediafile, new_mediafile):
         old_relations = old_mediafile.get("relations", [])
         new_relations = new_mediafile.get("relations", [])
-        unmatched = list(old_relations)
-        for item in new_relations:
-            try:
-                unmatched.remove(item)
-            except ValueError:
-                continue
+        for item in old_relations:
+            new_relations = [
+                relation
+                for relation in new_relations
+                if relation["key"] != item["key"] or relation["type"] != item["type"]
+            ]
 
-        return new_relations + unmatched
+        return new_relations + old_relations
 
     def __get_bucket_name(self, ticket=None):
         if ticket:
