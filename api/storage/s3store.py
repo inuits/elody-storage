@@ -114,6 +114,17 @@ class S3StorageManager:
             rights = f"rightsholder: {copyrights}, {rights}"
         return artist, rights
 
+    def __get_file_content(self, file, mimetype):
+        file_content = None
+        if mimetype == "text/plain":
+            file.seek(0)
+            raw_data = file.read()
+            file.seek(0)
+            file_content = (
+                raw_data.decode("utf-8") if isinstance(raw_data, bytes) else raw_data
+            )
+        return file_content
+
     def __get_file_mimetype(self, file, key):
         file.seek(0)
         mime = magic.Magic(mime=True).from_buffer(file.read(parse_size("8 KiB")))
@@ -203,6 +214,8 @@ class S3StorageManager:
         new_key,
         mimetype,
         exif_data=None,
+        *,
+        file_content=None,
     ):
         new_key = new_key.split("/")[-1]
         mediafile["identifiers"].append(md5sum)
@@ -224,6 +237,25 @@ class S3StorageManager:
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
         )
+        if (
+            file_content
+            and mimetype == "text/plain"
+            and (
+                parent_mediafile_ids := [
+                    relation["key"]
+                    for relation in mediafile.get("relations", [])
+                    if relation["type"] == "isOcrFor"
+                ]
+            )
+        ):
+            self.session.patch(
+                f"{self.collection_api_url}/mediafiles/{parent_mediafile_ids[0]}",
+                json={
+                    "metadata": [{"key": "text_from_ocr", "value": file_content}],
+                    "schema": {"type": "elody"},
+                    "type": "mediafile",
+                },
+            )
 
     def _get_mediafile(self, mediafile_id, fatal=True):
         req = self.session.get(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
@@ -422,6 +454,7 @@ class S3StorageManager:
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise Exception("Empty file, upload aborted")
         mimetype = self.__get_file_mimetype(file, key)
+        file_content = self.__get_file_content(file, mimetype)
         exif_data = (
             self._get_exif_data(file) if mimetype.startswith("image") else list()
         )
@@ -450,6 +483,7 @@ class S3StorageManager:
                 key,
                 mimetype,
                 exif_data,
+                file_content=file_content,
             )
             mediafile = self._get_mediafile(mediafile_id)
             download_url = urlparse(mediafile["original_file_location"])
