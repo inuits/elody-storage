@@ -89,10 +89,6 @@ class BaseResource(Resource):
                 raise NotFoundException(
                     f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found"
                 )
-            elif response.status_code == 403:
-                raise Exception(
-                    f"DEBUG: ticket 403 error. Request headers: {self.session.headers}"
-                )
             else:
                 response.raise_for_status()
         ticket = response.json()
