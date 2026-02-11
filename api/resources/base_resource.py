@@ -23,10 +23,12 @@ from werkzeug.datastructures import Headers
 
 class BaseResource(Resource):
     def __init__(self):
+        self.session = requests.Session()
         self.auth_headers = self.__get_auth_headers()
         user_header = request.headers.get("X-User-Email")
         if user_header:
             self.auth_headers["X-User-Email"] = user_header
+        self.session.headers.update(self.auth_headers)
         self.storage = StorageManager().get_storage_engine(self.auth_headers)
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
 
@@ -81,11 +83,14 @@ class BaseResource(Resource):
         request_url = f"{self.collection_api_url}/tickets/{ticket_id}"
         if api_key_hash:
             request_url = f"{request_url}?api_key_hash={api_key_hash}"
-        response = requests.get(request_url, headers=self.auth_headers)
+        response = self.session.get(request_url)
         if response.status_code != 200:
-            raise NotFoundException(
-                f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found"
-            )
+            if response.status_code == 400:
+                raise NotFoundException(
+                    f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found"
+                )
+            else:
+                response.raise_for_status()
         ticket = response.json()
         if ticket.get("is_expired", True):
             raise Exception(
@@ -215,4 +220,5 @@ class BaseResource(Resource):
         )
         if user:
             self.auth_headers["X-User-Email"] = user
+            self.session.headers.update({"X-User-Email": user})
         return user
