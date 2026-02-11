@@ -85,7 +85,7 @@ class BaseResource(Resource):
             request_url = f"{request_url}?api_key_hash={api_key_hash}"
         response = self.session.get(request_url)
         if response.status_code != 200:
-            if response.status_code == 400:
+            if response.status_code == 404:
                 raise NotFoundException(
                     f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found"
                 )
