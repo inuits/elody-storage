@@ -18,6 +18,7 @@ from flask import request, Response, stream_with_context
 from flask_restful import Resource, abort
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from storage.storagemanager import StorageManager
+from time import sleep
 from werkzeug.datastructures import Headers
 
 
@@ -83,7 +84,14 @@ class BaseResource(Resource):
         request_url = f"{self.collection_api_url}/tickets/{ticket_id}"
         if api_key_hash:
             request_url = f"{request_url}?api_key_hash={api_key_hash}"
-        response = self.session.get(request_url)
+        attempt = 0
+        while True:
+            response = self.session.get(request_url)
+            attempt += 1
+            if response.status_code != 200 and attempt < 4:
+                sleep(1 * attempt)
+                continue
+            break
         if response.status_code != 200:
             if response.status_code == 404:
                 raise NotFoundException(
