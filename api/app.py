@@ -16,12 +16,12 @@ from inuits_policy_based_auth import PolicyFactory
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from storage.storagemanager import StorageManager
 
-if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
+if os.getenv("GLITCH_TIP_ENABLED", False) in ["True", "true", True]:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
 
     sentry_sdk.init(
-        dsn=os.getenv("SENTRY_DSN"),
+        dsn=os.getenv("GLITCH_TIP_DSN"),
         integrations=[FlaskIntegration()],
         environment=os.getenv("NOMAD_NAMESPACE"),
     )
