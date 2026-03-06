@@ -26,11 +26,14 @@ class BaseResource(Resource):
     def __init__(self):
         self.session = requests.Session()
         self.auth_headers = self.__get_auth_headers()
+        self.service_headers = {"X-From-Service": "storage-api"}
         user_header = request.headers.get("X-User-Email")
         if user_header:
             self.auth_headers["X-User-Email"] = user_header
-        self.session.headers.update(self.auth_headers)
-        self.storage = StorageManager().get_storage_engine(self.auth_headers)
+        self.session.headers.update({**self.auth_headers, **self.service_headers})
+        self.storage = StorageManager().get_storage_engine(
+            {**self.auth_headers, **self.service_headers}
+        )
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
 
     def __get_auth_headers(self):
