@@ -11,8 +11,9 @@ from elody.exceptions import (
     DuplicateFileException,
     NotFoundException,
     FileNotFoundException,
+    EmptyFileException,
 )
-from elody.job import init_job, start_job, finish_job, fail_job
+from elody.job import init_job, start_job, finish_job, fail_job, finish_job_with_warning
 from elody.util import get_mimetype_from_filename
 from flask import request, Response, stream_with_context
 from flask_restful import Resource, abort
@@ -202,6 +203,12 @@ class BaseResource(Resource):
                 self.storage.upload_file(
                     file, mediafile_id, key, ticket, parent_job_id=parent_job_id
                 )
+        except EmptyFileException as ex:
+            if job_id:
+                finish_job_with_warning(
+                    job_id, info_message=str(ex), get_rabbit=get_rabbit
+                )
+                return ex.message, 422
         except (DuplicateFileException, Exception) as ex:
             if file:
                 file.close()

@@ -17,6 +17,7 @@ from elody.exceptions import (
     DuplicateFileException,
     FileNotFoundException,
     NotFoundException,
+    EmptyFileException,
 )
 from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
@@ -450,10 +451,19 @@ class S3StorageManager:
 
     def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
         mediafile = self._get_mediafile(mediafile_id)
+
         md5sum = self.__calculate_md5(file)
-        if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
-            raise Exception("Empty file, upload aborted")
         mimetype = self.__get_file_mimetype(file, key)
+        if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
+            if (
+                key.split(".")[-1] == "txt"
+            ):  # cannot detect based on mimetype, since mimetype of all emtpy files is "aplication/x-empty"
+                message = f"File {key} is empty."
+                raise EmptyFileException(
+                    f"{get_error_code(ErrorCode.EMPTY_FILE, get_write())} {message}",
+                    key,
+                )
+            raise Exception("Empty file, upload aborted")
         file_content = self.__get_file_content(file, mimetype)
         exif_data = (
             self._get_exif_data(file) if mimetype.startswith("image") else list()
