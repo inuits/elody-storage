@@ -269,6 +269,9 @@ class S3StorageManager:
                 f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Could not get mediafile with provided id '{mediafile_id}'"
             )
         else:
+            app.logger.error(
+                f"Received weird response from collection-api:\nstatus_code: {req.status_code}\nresponse content: {req.json()}"
+            )
             raise Exception(
                 f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Something went wrong while getting mediafile"
             )
