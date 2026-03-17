@@ -193,6 +193,7 @@ class BaseResource(Resource):
                 user_email=user,
                 parent_id=parent_job_id,
                 id_of_document_job_was_initiated_for=mediafile_id,
+                track_async_children=True,
             )
             start_job(job_id, get_rabbit=get_rabbit)
             if transcode:
@@ -201,7 +202,7 @@ class BaseResource(Resource):
                 )
             else:
                 self.storage.upload_file(
-                    file, mediafile_id, key, ticket, parent_job_id=parent_job_id
+                    file, mediafile_id, key, ticket, parent_job_id=job_id
                 )
         except EmptyFileException as ex:
             if job_id:
