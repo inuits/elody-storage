@@ -44,11 +44,11 @@ class BaseResource(Resource):
             tenant = request.headers.get("apikey", os.getenv("STATIC_APIKEY"))
         if tenant:
             return {
-                "Authorization": f'Bearer {os.getenv("STATIC_JWT")}',
+                "Authorization": f"Bearer {os.getenv('STATIC_JWT')}",
                 "apikey": tenant,
             }
         else:
-            return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
+            return {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
 
     def __get_byte_range(self, range_header):
         g = re.search("(\d+)-(\d*)", range_header).groups()

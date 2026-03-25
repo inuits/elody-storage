@@ -107,10 +107,10 @@ class S3StorageManager:
             return None
 
     def __get_exif_for_mediafile(self, mediafile):
-        artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
+        artist = f"source: {self.__get_item_metadata_value(mediafile, 'source')}"
         if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
             artist = f"photographer: {photographer}, {artist}"
-        rights = f'license: {self.__get_item_metadata_value(mediafile, "rights")}'
+        rights = f"license: {self.__get_item_metadata_value(mediafile, 'rights')}"
         if copyrights := self.__get_item_metadata_value(mediafile, "copyright"):
             rights = f"rightsholder: {copyrights}, {rights}"
         return artist, rights
@@ -273,7 +273,7 @@ class S3StorageManager:
                 f"Received weird response from collection-api:\nstatus_code: {req.status_code}\nresponse content: {req.json()}"
             )
             raise Exception(
-                f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Something went wrong while getting mediafile"
+                f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Something went wrong while getting mediafile "
             )
 
     def add_exif_data(self, mediafile):
@@ -290,7 +290,7 @@ class S3StorageManager:
             Fileobj=buf, Key=self.__get_key(mediafile["filename"])
         )
         self.session.patch(
-            f'{self.collection_api_url}/mediafiles/{mediafile["identifiers"][0]}',
+            f"{self.collection_api_url}/mediafiles/{mediafile['identifiers'][0]}",
             json={"exif": str(exif), "schema": {"type": "elody"}, "type": "mediafile"},
         )
 
