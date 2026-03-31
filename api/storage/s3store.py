@@ -29,6 +29,7 @@ NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in [
     "True",
     True,
 ]
+ROUTING_KEY_PREFIX = os.getenv("ROUTING_KEY_PREFIX", "dams")
 
 
 class S3StorageManager:
@@ -194,9 +195,16 @@ class S3StorageManager:
             raise Exception(f"File mimetype {mimetype} is not allowed.")
 
     def __signal_file_uploaded(
-        self, mediafile, mimetype, url, headers, ticket=None, parent_job_id=None
+        self,
+        mediafile,
+        mimetype,
+        url,
+        headers,
+        ticket=None,
+        parent_job_id=None,
     ):
-        attributes = {"type": "dams.file_uploaded", "source": "dams"}
+        # TODO: This should probably know which customer the source is?  # noqa: E501, TD002, TD003
+        attributes = {"type": "dams.file_uploaded", "source": "storage-api"}
         data = {
             "mediafile": mediafile,
             "mimetype": mimetype,
@@ -205,8 +213,12 @@ class S3StorageManager:
             "ticket": ticket,
             "parent_job_id": parent_job_id,
         }
+        cleaned_mimetype_routing = mimetype.split(";")[0].strip().replace("/", ".")
         event = to_dict(CloudEvent(attributes, data))
-        get_rabbit().send(event, routing_key="dams.file_uploaded")
+        get_rabbit().send(
+            event,
+            routing_key=f"{ROUTING_KEY_PREFIX}.file_uploaded.{cleaned_mimetype_routing}",
+        )
 
     def __update_mediafile_information(
         self,
@@ -223,7 +235,7 @@ class S3StorageManager:
         mediafile["md5sum"] = md5sum
         mediafile["original_filename"] = mediafile["filename"]
         if not mediafile.get(
-            "technical_origin"
+            "technical_origin",
         ):  # It will otherwise overwrite the original if already present
             mediafile["technical_origin"] = "original"
         mediafile["filename"] = new_key

@@ -1,9 +1,12 @@
+from pandas.compat.numpy.function import ROUND_DEFAULTS
+from os import getenv
+
 from app import logger
 from rabbit import get_rabbit
 from storage.storagemanager import StorageManager
-from os import getenv
 
 queue_type = getenv("QUEUE_TYPE", "classic")
+ROUTING_KEY_PREFIX = getenv("ROUTING_KEY_PREFIX", "dams")
 
 
 def __is_malformed_message(data, fields):
@@ -25,8 +28,11 @@ def __argument_wrapper(*, queue_name, routing_key):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name="basic.add.exif.data.to.image",
-        routing_key=["dams.file_uploaded", "dams.mediafile_changed"],
-    )
+        routing_key=[
+            f"{ROUTING_KEY_PREFIX}.file_uploaded.#",
+            f"{ROUTING_KEY_PREFIX}.mediafile_changed",
+        ],
+    ),
 )
 def add_exif_data_to_image(routing_key, body, message_id):
     data = body["data"]
@@ -48,8 +54,8 @@ def add_exif_data_to_image(routing_key, body, message_id):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name="basic.remove.infected.file.from.storage",
-        routing_key="dams.file_scanned",
-    )
+        routing_key=f"{ROUTING_KEY_PREFIX}.file_scanned",
+    ),
 )
 def remove_infected_file_from_storage(routing_key, body, message_id):
     data = body["data"]
@@ -62,8 +68,8 @@ def remove_infected_file_from_storage(routing_key, body, message_id):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name="basic.remove.file.from.storage",
-        routing_key="dams.mediafile_deleted",
-    )
+        routing_key=f"{ROUTING_KEY_PREFIX}.mediafile_deleted",
+    ),
 )
 def remove_file_from_storage(routing_key, body, message_id):
     data = body["data"]
