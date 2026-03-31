@@ -1,4 +1,3 @@
-from pandas.compat.numpy.function import ROUND_DEFAULTS
 from os import getenv
 
 from app import logger
