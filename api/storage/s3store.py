@@ -306,9 +306,9 @@ class S3StorageManager:
             json={"exif": str(exif), "schema": {"type": "elody"}, "type": "mediafile"},
         )
 
-    def check_file_exists(self, filename, md5sum, ticket=None):
+    def check_file_exists(self, filename, md5sum, ticket=None, bucket_name=None):
         if self.duplicate_file_check in ["True", True, "true"]:
-            bucket_name = self.__get_bucket_name(ticket)
+            bucket_name = bucket_name or self.__get_bucket_name(ticket)
             client = self.s3.Bucket(bucket_name).meta.client
             objects = client.list_objects_v2(Bucket=bucket_name, Prefix=md5sum)
             if len(objects.get("Contents", [])):
@@ -464,10 +464,22 @@ class S3StorageManager:
                     return date_str
         return None
 
-    def upload_file(self, file, mediafile_id, key, ticket, parent_job_id=None):
+    def upload_file(
+        self,
+        file,
+        mediafile_id,
+        key,
+        ticket,
+        parent_job_id=None,
+        *,
+        md5sum=None,
+        skip_s3_upload=False,
+        bucket_name=None,
+        is_duplicate=False,
+    ):
         mediafile = self._get_mediafile(mediafile_id)
 
-        md5sum = self.__calculate_md5(file)
+        md5sum = md5sum or self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             if (
@@ -487,18 +499,23 @@ class S3StorageManager:
             exif_data
         )
         try:
-            self.check_file_exists(key, md5sum, ticket)
+            if skip_s3_upload:
+                if is_duplicate:
+                    self.check_file_exists(key, md5sum, ticket)
+            else:
+                self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
             if mediafile:
                 self.__handle_duplicate_file(
                     mediafile, mimetype, ex.md5sum, ex.filename, ex.message
                 )
-        key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
-        self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
-            Fileobj=file, Key=key
-        )
+        if not skip_s3_upload:
+            key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
+            self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
+                Fileobj=file, Key=key
+            )
         if mediafile:
-            bucket = ticket.get("bucket")
+            bucket = bucket_name or ticket.get("bucket")
             mediafile["filesize"] = self.__get_filesize_s3(
                 key, bucket
             ) or self.__get_filesize(file)

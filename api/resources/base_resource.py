@@ -19,6 +19,7 @@ from flask import request, Response, stream_with_context
 from flask_restful import Resource, abort
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from storage.storagemanager import StorageManager
+from storage.streamed_storagemanager import StreamedStorageManager
 from time import sleep
 from werkzeug.datastructures import Headers
 
@@ -35,6 +36,7 @@ class BaseResource(Resource):
         self.storage = StorageManager().get_storage_engine(
             {**self.auth_headers, **self.service_headers}
         )
+        self.store = StreamedStorageManager().get_storage_engine()
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
 
     def __get_auth_headers(self):

@@ -164,5 +164,12 @@ api.add_resource(UploadTranscode, "/upload/transcode")
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
 
+from resources.streamed_upload import AbortStream, CompleteStream, InitStream, SignChunk
+
+api.add_resource(AbortStream, "/upload/abort-stream")
+api.add_resource(CompleteStream, "/upload/complete-stream")
+api.add_resource(InitStream, "/upload/init-stream")
+api.add_resource(SignChunk, "/upload/sign-chunk")
+
 if __name__ == "__main__":
     app.run()

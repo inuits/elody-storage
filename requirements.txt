@@ -1,9 +1,10 @@
 AMQPStorm==2.11.1
-amqpstorm-flask==0.6.0-dev
+amqpstorm-flask==0.6.1
 aniso8601==10.0.0
 Authlib==1.5.1
 apscheduler==3.11.0
 blinker==1.9.0
+boto3-stubs[s3]==1.35.40
 boto3==1.35.40
 botocore==1.35.40
 certifi==2024.8.30
@@ -14,7 +15,7 @@ cloudevents==1.11.0
 cryptography==44.0.2
 decorator==5.2.1
 deprecation==2.1.0
-elody[loader]==0.0.248
+elody[loader]==0.0.252
 Flask==3.1.0
 Flask-Cors==5.0.0
 Flask-RESTful==0.3.10
