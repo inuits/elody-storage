@@ -9,8 +9,8 @@ import requests
 from rabbit import get_rabbit
 
 from botocore.exceptions import ClientError
-from cloudevents.conversion import to_dict
-from cloudevents.http import CloudEvent
+from cloudevents.v1.conversion import to_dict
+from cloudevents.v1.http import CloudEvent
 from dateutil import parser
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
