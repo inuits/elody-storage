@@ -47,6 +47,16 @@ class StreamedS3Store:
             ExpiresIn=3600,
         )
 
+    def get_stream_status(self, *, stream_id: str, key: str):
+        response = self.client.list_parts(
+            Bucket=self.__get_bucket(),
+            Key=key,
+            UploadId=stream_id,
+        )
+        return [
+            part["PartNumber"] for part in response.get("Parts", [])  # pyright: ignore
+        ]
+
     def complete_stream(
         self,
         *,

@@ -37,6 +37,24 @@ class SignChunk(BaseResource):
             return str(ex), 500
 
 
+class StreamStatus(BaseResource):
+    @policy_factory.authenticate(RequestContext(request))
+    def get(self):
+        try:
+            if not (stream_id := request.args.get("stream_id")):
+                raise BadRequest("Missing required query parameter 'stream_id'")
+            if not (mediafile_id := request.args.get("mediafile_id")):
+                raise BadRequest("Missing required query parameter 'mediafile_id'")
+            uploaded_chunks = self.store.get_stream_status(
+                stream_id=stream_id, key=mediafile_id
+            )
+            return {"uploaded_chunks": uploaded_chunks}, 200
+        except BadRequest as ex:
+            return str(ex), 400
+        except Exception as ex:
+            return str(ex), 500
+
+
 class CompleteStream(BaseResource):
     @policy_factory.authenticate(RequestContext(request))
     def post(self):
