@@ -54,7 +54,11 @@ class StreamedS3Store:
             UploadId=stream_id,
         )
         return [
-            part["PartNumber"] for part in response.get("Parts", [])  # pyright: ignore
+            {
+                "sequence_number": part["PartNumber"],  # pyright: ignore
+                "hash": part["ETag"],  # pyright: ignore
+            }
+            for part in response.get("Parts", [])
         ]
 
     def complete_stream(
