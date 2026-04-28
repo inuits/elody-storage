@@ -3,7 +3,7 @@ FROM python:3.12-alpine AS base-stage
 
 ENV FLASK_APP=app.py
 
-RUN apk add --no-cache libmagic && adduser --disabled-password --home /app --shell /bin/bash app
+RUN apk add --no-cache libmagic libmediainfo && adduser --disabled-password --home /app --shell /bin/bash app
 
 USER app
 WORKDIR /app

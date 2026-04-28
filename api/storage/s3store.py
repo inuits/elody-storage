@@ -7,6 +7,7 @@ import os
 import re
 import requests
 from rabbit import get_rabbit
+from pymediainfo import MediaInfo
 
 from botocore.exceptions import ClientError
 from cloudevents.v1.conversion import to_dict
@@ -127,13 +128,43 @@ class S3StorageManager:
             )
         return file_content
 
+    def __refine_media_mimetype(self, file, current_mime):
+        """
+        Looks inside the media container to determine if it's strictly audio or video.
+        """
+        try:
+            file.seek(0)
+            media_info = MediaInfo.parse(file)
+            track_types = [track.track_type for track in media_info.tracks]
+
+            if "Audio" in track_types and "Video" not in track_types:
+                return "audio/mp4"
+            elif "Video" in track_types:
+                return current_mime
+
+        except Exception as e:
+            return current_mime
+        finally:
+            file.seek(0)
+
+        return current_mime
+
     def __get_file_mimetype(self, file, key):
         file.seek(0)
         mime = magic.Magic(mime=True).from_buffer(file.read(parse_size("8 KiB")))
         file.seek(0)
         if mime == "application/octet-stream":
             mime = get_mimetype_from_filename(key)
-        self.__valiate_mimetype_access_control(mime)
+        ambiguous_media_mimes = [
+            "video/quicktime",
+            "video/mp4",
+            "audio/mp4",
+            "video/3gpp",
+        ]
+        if mime in ambiguous_media_mimes or str(mime).startswith("video/"):
+            mime = self.__refine_media_mimetype(file, mime)
+
+        self.__validate_mimetype_access_control(mime)
         return mime
 
     def __get_item_metadata_value(self, item, key):
@@ -185,7 +216,7 @@ class S3StorageManager:
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
         )
 
-    def __valiate_mimetype_access_control(self, mimetype):
+    def __validate_mimetype_access_control(self, mimetype):
         has_access_control = False
         if self.access_control_type == "allow":
             has_access_control = mimetype in self.access_control_list
