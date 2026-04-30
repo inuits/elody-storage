@@ -106,7 +106,7 @@ class StreamedS3Store:
 
         response = self.client.get_object(Bucket=bucket_name, Key=filename)
         with response["Body"] as file_stream:
-            header_data = file_stream.read(500 * (1024**2))
+            header_data = file_stream.read(1 * (1024**3))
             with closing(BytesIO(header_data)) as file_part:
                 file_part.name = file_info["name"]
                 legacy_store.upload_file(
