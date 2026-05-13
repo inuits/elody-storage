@@ -1,26 +1,26 @@
 import os
 import re
-import requests
 import shutil
 import tempfile
+from time import sleep
 
+import requests
 from app import get_user_context
-from rabbit import get_rabbit
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
-    NotFoundException,
-    FileNotFoundException,
     EmptyFileException,
+    FileNotFoundException,
+    NotFoundException,
 )
-from elody.job import init_job, start_job, finish_job, fail_job, finish_job_with_warning
+from elody.job import fail_job, finish_job, finish_job_with_warning, init_job, start_job
 from elody.util import get_mimetype_from_filename
-from flask import request, Response, stream_with_context
+from flask import Response, request, stream_with_context
 from flask_restful import Resource, abort
 from inuits_policy_based_auth.exceptions import NoUserContextException
+from rabbit import get_rabbit
 from storage.storagemanager import StorageManager
 from storage.streamed_storagemanager import StreamedStorageManager
-from time import sleep
 from werkzeug.datastructures import Headers
 
 
@@ -34,7 +34,7 @@ class BaseResource(Resource):
             self.auth_headers["X-User-Email"] = user_header
         self.session.headers.update({**self.auth_headers, **self.service_headers})
         self.storage = StorageManager().get_storage_engine(
-            {**self.auth_headers, **self.service_headers}
+            {**self.auth_headers, **self.service_headers},
         )
         self.store = StreamedStorageManager().get_storage_engine()
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
@@ -49,11 +49,10 @@ class BaseResource(Resource):
                 "Authorization": f"Bearer {os.getenv('STATIC_JWT')}",
                 "apikey": tenant,
             }
-        else:
-            return {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
+        return {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
 
     def __get_byte_range(self, range_header):
-        g = re.search("(\d+)-(\d*)", range_header).groups()
+        g = re.search(r"(\d+)-(\d*)", range_header).groups()
         byte1, byte2, length = 0, None, None
         if g[0]:
             byte1 = int(g[0])
@@ -82,13 +81,13 @@ class BaseResource(Resource):
         if getattr(file, "name", None):
             return file.name
         raise Exception(
-            f"{get_error_code(ErrorCode.NO_FILENAME_SPECIFIED, get_write())} Could not determine filename for upload"
+            f"{get_error_code(ErrorCode.NO_FILENAME_SPECIFIED, get_write())} Could not determine filename for upload",
         )
 
     def _get_ticket(self, ticket_id, api_key_hash=None):
         if not ticket_id:
             raise Exception(
-                f"{get_error_code(ErrorCode.NO_TICKET_ID_SPECIFIED, get_write())} No ticket id given"
+                f"{get_error_code(ErrorCode.NO_TICKET_ID_SPECIFIED, get_write())} No ticket id given",
             )
         request_url = f"{self.collection_api_url}/tickets/{ticket_id}"
         if api_key_hash:
@@ -104,14 +103,13 @@ class BaseResource(Resource):
         if response.status_code != 200:
             if response.status_code == 404:
                 raise NotFoundException(
-                    f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found"
+                    f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found",
                 )
-            else:
-                response.raise_for_status()
+            response.raise_for_status()
         ticket = response.json()
         if ticket.get("is_expired", True):
             raise Exception(
-                f"{get_error_code(ErrorCode.TICKET_EXPIRED, get_write())} Ticket is expired"
+                f"{get_error_code(ErrorCode.TICKET_EXPIRED, get_write())} Ticket is expired",
             )
         return ticket
 
@@ -135,14 +133,16 @@ class BaseResource(Resource):
                 length = byte_end + 1 - byte_start
 
             file_object = self.storage.download_file(
-                key, f"bytes={byte_start}-{byte_end}", ticket
+                key,
+                f"bytes={byte_start}-{byte_end}",
+                ticket,
             )
 
             headers["Content-Range"] = f"bytes {byte_start}-{byte_end}/{full_length}"
             headers["Content-Length"] = file_object["content_length"]
             return Response(
                 stream_with_context(
-                    self.storage.get_stream_generator(file_object["stream"])
+                    self.storage.get_stream_generator(file_object["stream"]),
                 ),
                 mimetype=content_type,
                 headers=headers,
@@ -153,7 +153,7 @@ class BaseResource(Resource):
         headers["Content-Length"] = full_length
         return Response(
             stream_with_context(
-                self.storage.get_stream_generator(file_object["stream"])
+                self.storage.get_stream_generator(file_object["stream"]),
             ),
             mimetype=content_type,
             headers=headers,
@@ -184,7 +184,7 @@ class BaseResource(Resource):
         try:
             if not (mediafile_id := request.args.get("id")) and not ticket:
                 raise NotFoundException(
-                    f"{get_error_code(ErrorCode.PROVIDE_MEDIAFILE_ID_OR_TICKET_ID, get_write())} Provide either a mediafile ID or a ticket ID"
+                    f"{get_error_code(ErrorCode.PROVIDE_MEDIAFILE_ID_OR_TICKET_ID, get_write())} Provide either a mediafile ID or a ticket ID",
                 )
             if not mediafile_id and "mediafile_id" in ticket:
                 mediafile_id = ticket.get("mediafile_id")
@@ -203,16 +203,26 @@ class BaseResource(Resource):
             start_job(job_id, get_rabbit=get_rabbit)
             if transcode:
                 self.storage.upload_transcode(
-                    file, mediafile_id, key, ticket, ignore_duplicate_check
+                    file,
+                    mediafile_id,
+                    key,
+                    ticket,
+                    ignore_duplicate_check,
                 )
             else:
                 self.storage.upload_file(
-                    file, mediafile_id, key, ticket, parent_job_id=job_id
+                    file,
+                    mediafile_id,
+                    key,
+                    ticket,
+                    parent_job_id=job_id,
                 )
         except EmptyFileException as ex:
             if job_id:
                 finish_job_with_warning(
-                    job_id, info_message=str(ex), get_rabbit=get_rabbit
+                    job_id,
+                    info_message=str(ex),
+                    get_rabbit=get_rabbit,
                 )
                 return ex.message, 422
         except (DuplicateFileException, Exception) as ex:
