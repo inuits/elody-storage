@@ -71,9 +71,12 @@ class BaseResource(Resource):
             file.seek(0)
         return file
 
-    def __get_key_for_file(self, key, file):
+    def __get_key_for_file(self, key, file, ticket=None):
         if key:
             return key
+        if ticket and ticket.get("location"):
+            return ticket.get("location")
+
         if getattr(file, "filename", None):
             return file.filename
         if getattr(file, "name", None):
@@ -186,10 +189,10 @@ class BaseResource(Resource):
             if not mediafile_id and "mediafile_id" in ticket:
                 mediafile_id = ticket.get("mediafile_id")
             file = self.__get_file_object()
-            key = self.__get_key_for_file(key, file)
+            key = self.__get_key_for_file(key, file, ticket)
             parent_job_id = request.view_args.get("parent_job_id") or parent_job_id
             job_id = init_job(
-                f"Upload {'transcode of ' if transcode else ''}{key}",
+                f"Upload {key}",
                 "File upload",
                 get_rabbit=get_rabbit,
                 user_email=user,
