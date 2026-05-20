@@ -32,6 +32,8 @@ NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in [
 ]
 ROUTING_KEY_PREFIX = os.getenv("ROUTING_KEY_PREFIX", "dams")
 
+Image.MAX_IMAGE_PIXELS = None
+
 
 class S3StorageManager:
     def __init__(self):
@@ -50,7 +52,6 @@ class S3StorageManager:
             (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
         )
         self.access_control_type = os.getenv("ACCESS_CONTROL_TYPE", "deny").lower()
-        Image.MAX_IMAGE_PIXELS = 300000000
 
     def set_headers(self, headers):
         self.headers = headers
