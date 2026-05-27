@@ -612,7 +612,7 @@ class S3StorageManager:
             self.session.post(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
                 json=data,
-            )
+            ).raise_for_status()
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 json={
@@ -620,7 +620,7 @@ class S3StorageManager:
                     "schema": {"type": "elody"},
                     "type": "mediafile",
                 },
-            )
+            ).raise_for_status()
         except Exception as ex:
             raise Exception(str(ex))
 
