@@ -7,7 +7,7 @@ dependencies = [
   "amqpstorm-flask==0.6.1",
   "aniso8601==10.0.0",
   "apscheduler==3.11.0",
-  "authlib==1.5.1",
+  "authlib==1.7.2",
   "blinker==1.9.0",
   "boto3==1.35.40",
   "boto3-stubs[s3]==1.35.40",
