@@ -28,7 +28,7 @@ dependencies = [
   "gunicorn==23.0.0",
   "humanfriendly==10.0",
   "idna==3.10",
-  "inuits-policy-based-auth==10.0.1",
+  "inuits-policy-based-auth==10.1.0",
   "itsdangerous==2.2.0",
   "jinja2==3.1.4",
   "jmespath==1.0.1",
