@@ -1,12 +1,15 @@
-from elody.loader import load_queues
-from elody.util import CustomJSONEncoder, custom_json_dumps
+import logging
 from importlib import import_module
 from json import loads
 from os import getenv
 from typing import Any
 
+from elody.loader import load_queues
+from elody.util import CustomJSONEncoder, custom_json_dumps
 
 _rabbit = None
+
+logger = logging.getLogger(__name__)
 
 
 def init_rabbit(app):
@@ -52,7 +55,7 @@ def init_rabbit(app):
         )
     else:
         _rabbit.init_app(app, "basic", loads, custom_json_dumps)
-    load_queues(None)
+    load_queues(logger)
 
 
 def get_rabbit() -> Any:
