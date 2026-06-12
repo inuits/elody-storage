@@ -3,44 +3,15 @@
   "extends": ["config:recommended"],
   "packageRules": [
     {
-      "description": "Disable all requirements.txt updates by default",
-      "matchManagers": ["pip_requirements"],
-      "enabled": false
-    },
-    {
-      "description": "Disable all pyproject.toml updates by default",
-      "matchManagers": ["pep621"],
-      "enabled": false
-    },
-    {
-      "description": "Re-enable specific packages for requirements.txt",
-      "matchManagers": ["pip_requirements"],
-      "matchPackageNames": [
-        "amqpstorm-flask",
-        "Authlib",
-        "cffi",
-        "cryptography",
-        "elody",
-        "inuits-policy-based-auth",
-        "requests",
-        "requests-cache"
-      ],
+      "description": "Enable packages for requirements.txt",
+      "matchManagers": ["pip_requirements", "pep621"],
       "enabled": true
     },
     {
-      "description": "Re-enable specific packages for pyproject.toml",
-      "matchManagers": ["pep621"],
-      "matchPackageNames": [
-        "amqpstorm-flask",
-        "Authlib",
-        "cffi",
-        "cryptography",
-        "elody",
-        "inuits-policy-based-auth",
-        "requests",
-        "requests-cache"
-      ],
-      "enabled": true
+      "description": "Disable specific packages",
+      "matchManagers": ["pip_requirements", "pep621"],
+      "matchPackageNames": ["AMQPStorm"],
+      "enabled": false
     }
   ]
 }
