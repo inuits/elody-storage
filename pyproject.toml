@@ -1,5 +1,5 @@
 [project]
-name = "Elody storage api"
+name = "Elody-storage-api"
 requires-python = "~=3.13.0"
 version = "0.0.1"
 dependencies = [

@@ -16,14 +16,14 @@
       "description": "Re-enable specific packages for requirements.txt",
       "matchManagers": ["pip_requirements"],
       "matchPackageNames": [
-        "elody",
         "amqpstorm-flask",
+        "Authlib",
+        "cffi",
+        "cryptography",
+        "elody",
         "inuits-policy-based-auth",
         "requests",
-        "requests-cache",
-        "cryptography",
-        "cffi",
-        "Authlib"
+        "requests-cache"
       ],
       "enabled": true
     },
@@ -31,14 +31,14 @@
       "description": "Re-enable specific packages for pyproject.toml",
       "matchManagers": ["pep621"],
       "matchPackageNames": [
-        "elody",
         "amqpstorm-flask",
+        "Authlib",
+        "cffi",
+        "cryptography",
+        "elody",
         "inuits-policy-based-auth",
         "requests",
-        "requests-cache",
-        "cryptography",
-        "cffi",
-        "Authlib"
+        "requests-cache"
       ],
       "enabled": true
     }
