@@ -1,14 +1,13 @@
-import app
-import boto3
 import hashlib
 import io
-import magic
 import os
 import re
-import requests
-from rabbit import get_rabbit
-from pymediainfo import MediaInfo
+from urllib.parse import urlparse
 
+import app
+import boto3
+import magic
+import requests
 from botocore.exceptions import ClientError
 from cloudevents.v1.conversion import to_dict
 from cloudevents.v1.http import CloudEvent
@@ -16,14 +15,15 @@ from dateutil import parser
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
+    EmptyFileException,
     FileNotFoundException,
     NotFoundException,
-    EmptyFileException,
 )
 from elody.util import get_mimetype_from_filename
 from humanfriendly import parse_size
-from PIL import Image, ExifTags, TiffImagePlugin
-from urllib.parse import urlparse
+from PIL import ExifTags, Image, TiffImagePlugin
+from pymediainfo import MediaInfo
+from rabbit import get_rabbit
 
 NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in [
     "true",
@@ -143,7 +143,7 @@ class S3StorageManager:
             elif "Video" in track_types:
                 return current_mime
 
-        except Exception as e:
+        except Exception:
             return current_mime
         finally:
             file.seek(0)
@@ -180,14 +180,14 @@ class S3StorageManager:
     def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
         try:
             found_mediafile = self._get_mediafile(md5sum)
-        except NotFoundException:
+        except NotFoundException as nerr:
             self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
             message = (
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
             raise DuplicateFileException(
                 f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
-            )
+            ) from nerr
         mediafile_id = self.__get_raw_id(mediafile)
         if self.__get_raw_id(found_mediafile) != mediafile_id:
             self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
@@ -235,7 +235,6 @@ class S3StorageManager:
         ticket=None,
         parent_job_id=None,
     ):
-        # TODO: This should probably know which customer the source is?  # noqa: E501, TD002, TD003
         attributes = {"type": "dams.file_uploaded", "source": "storage-api"}
         data = {
             "mediafile": mediafile,
@@ -374,12 +373,12 @@ class S3StorageManager:
                 file_obj = client.get_object(
                     Bucket=bucket_name, Key=self.__get_key(file_name, ticket=ticket)
                 )
-        except ClientError:
+        except ClientError as cerr:
             message = f"File {file_name} not found with key {self.__get_key(file_name, ticket=ticket)}"
             app.logger.error(message)
             raise FileNotFoundException(
                 f"{get_error_code(ErrorCode.FILE_NOT_FOUND, get_write())} {message}"
-            )
+            ) from cerr
         return {"stream": file_obj["Body"], "content_length": file_obj["ContentLength"]}
 
     def get_file_info(self, file_name, ticket=None):
@@ -524,9 +523,7 @@ class S3StorageManager:
                 )
             raise Exception("Empty file, upload aborted")
         file_content = self.__get_file_content(file, mimetype)
-        exif_data = (
-            self._get_exif_data(file) if mimetype.startswith("image") else list()
-        )
+        exif_data = self._get_exif_data(file) if mimetype.startswith("image") else []
         mediafile["file_creation_date"] = self._check_keys_and_extract_creation_dates(
             exif_data
         )
@@ -622,7 +619,7 @@ class S3StorageManager:
                 },
             ).raise_for_status()
         except Exception as ex:
-            raise Exception(str(ex))
+            raise Exception(str(ex)) from ex
 
     def __get_filename_from_key(self, key):
         uuid_pattern = re.compile(r"[0-9a-fA-F]{32}-")

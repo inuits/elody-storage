@@ -1,12 +1,13 @@
+from contextlib import closing
+from io import BytesIO
+from os import getenv
+
 from boto3 import client, resource
 from botocore.config import Config
-from contextlib import closing
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import DuplicateFileException
-from io import BytesIO
 from mypy_boto3_s3.client import S3Client
 from mypy_boto3_s3.service_resource import S3ServiceResource
-from os import getenv
 
 
 class StreamedS3Store:
@@ -94,9 +95,7 @@ class StreamedS3Store:
                 Key=key,
                 UploadId=stream_id,
                 MultipartUpload={
-                    "Parts": sorted(
-                        parts, key=lambda part: part["PartNumber"]
-                    )  # pyright: ignore
+                    "Parts": sorted(parts, key=lambda part: part["PartNumber"])  # pyright: ignore
                 },
             )
             self.resource.Bucket(bucket_name).copy(

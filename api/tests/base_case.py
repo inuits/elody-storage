@@ -1,11 +1,11 @@
-import boto3
 import hashlib
 import os
 import unittest
+from io import BytesIO
 
+import boto3
 from app import app
 from humanfriendly import parse_size
-from io import BytesIO
 from PIL import Image
 
 s3 = boto3.resource(

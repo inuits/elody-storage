@@ -1,19 +1,18 @@
-import json
 import logging
 import os
 import secrets
+from importlib import import_module
 
 from elody.loader import load_apps, load_policies
-from elody.util import CustomJSONEncoder, custom_json_dumps
-from rabbit import init_rabbit, get_rabbit
+from elody.util import CustomJSONEncoder
 from flask import Flask, g
 from flask_cors import CORS
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
-from importlib import import_module
 from inuits_policy_based_auth import PolicyFactory
 from inuits_policy_based_auth.exceptions import NoUserContextException
+from rabbit import get_rabbit, init_rabbit
 from storage.storagemanager import StorageManager
 
 if os.getenv("GLITCH_TIP_ENABLED", False) in ["True", "true", True]:
@@ -132,17 +131,29 @@ try:
 except ModuleNotFoundError:
     load_policies(policy_factory, logger)
 
-from resources.download import Download, DownloadWithTicket
-from resources.unique import Unique
-from resources.upload import (
+# TODO (tim.standaert): E402 is disabled here because of circular imports when placed at the  # noqa: FIX002
+# top of the filename These should be moved to another file like in the
+# collection api (init_api or something), but even then we would
+# streamed_upload to import that here, otherwise there's issues with the fact
+# that the policy_factory is defined here, which should then also be moved,
+# which is a bit much
+from resources.download import Download, DownloadWithTicket  # noqa: E402
+from resources.spec import AsyncAPISpec, OpenAPISpec  # noqa: E402
+from resources.streamed_upload import (  # noqa: E402
+    AbortStream,
+    CompleteStream,
+    InitStream,
+    SignChunk,
+    StreamStatus,
+)
+from resources.unique import Unique  # noqa: E402
+from resources.upload import (  # noqa: E402
     Upload,
-    UploadWithTicket,
     UploadKey,
     UploadKeyWithTicket,
     UploadTranscode,
+    UploadWithTicket,
 )
-from resources.spec import AsyncAPISpec, OpenAPISpec
-import resources.queues
 
 if os.getenv("ENABLE_DELETE"):
     from resources.delete import Delete, DeleteMultiple
@@ -164,13 +175,6 @@ api.add_resource(UploadTranscode, "/upload/transcode")
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")
 
-from resources.streamed_upload import (
-    AbortStream,
-    CompleteStream,
-    InitStream,
-    SignChunk,
-    StreamStatus,
-)
 
 api.add_resource(AbortStream, "/upload/abort-stream")
 api.add_resource(CompleteStream, "/upload/complete-stream")

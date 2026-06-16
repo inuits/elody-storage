@@ -1,5 +1,5 @@
 from app import policy_factory
-from flask import request, Response
+from flask import Response, request
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
 
@@ -12,7 +12,7 @@ class Download(BaseResource):
 
 class DownloadWithTicket(BaseResource):
     def head(self, key):
-        headers = dict()
+        headers = {}
         file_info = self.storage.get_file_info(key)
         for s3_key, header_key in {
             "AcceptRanges": "Accept-Ranges",

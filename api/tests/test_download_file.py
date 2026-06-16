@@ -1,7 +1,7 @@
 import uuid
+from unittest.mock import MagicMock, patch
 
 from tests.base_case import BaseCase
-from unittest.mock import patch, MagicMock
 
 
 @patch("app.jobs_extension", new=MagicMock())
@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock
 @patch("storage.s3store.S3StorageManager._get_mediafile", new=MagicMock())
 class DownloadFileTest(BaseCase):
     def test_download(self):
-        data = dict()
+        data = {}
         data["file"] = self.create_test_image()
         md5 = self.calculate_md5(data["file"])
 
@@ -20,7 +20,7 @@ class DownloadFileTest(BaseCase):
             data=data,
         )
 
-        response = self.app.get("/download/{}-test.png".format(md5))
+        response = self.app.get(f"/download/{md5}-test.png")
 
         self.assertEqual(200, response.status_code)
 

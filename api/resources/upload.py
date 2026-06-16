@@ -2,7 +2,6 @@ from app import policy_factory
 from flask import request
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
-from storage.storagemanager import StorageManager
 
 
 class Upload(BaseResource):

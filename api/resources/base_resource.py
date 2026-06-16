@@ -127,10 +127,10 @@ class BaseResource(Resource):
 
         range_header = request.headers.get("Range")
         if range_header:
-            byte_start, byte_end, length = self.__get_byte_range(range_header)
+            byte_start, byte_end, _ = self.__get_byte_range(range_header)
             if byte_end is None:
                 byte_end = full_length - 1
-                length = byte_end + 1 - byte_start
+                _ = byte_end + 1 - byte_start
 
             file_object = self.storage.download_file(
                 key,

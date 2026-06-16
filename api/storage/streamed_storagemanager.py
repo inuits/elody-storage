@@ -1,5 +1,6 @@
-from elody.util import Singleton
 from os import getenv
+
+from elody.util import Singleton
 from storage.streamed_s3store import StreamedS3Store
 
 

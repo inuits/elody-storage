@@ -1,7 +1,7 @@
 import uuid
+from unittest.mock import MagicMock, patch
 
 from tests.base_case import BaseCase
-from unittest.mock import patch, MagicMock
 
 
 @patch("app.jobs_extension", new=MagicMock())
