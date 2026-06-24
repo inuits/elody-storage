@@ -1,24 +1,55 @@
 ---
 include:
-  - project: 'inuits/gitlab-ci/pipeline-templates'
-    ref: 'v4.20.0'
+  - project: "inuits/gitlab-ci/pipeline-templates"
+    ref: "v4.20.0"
     file:
-      - '/pipelines/customers/dams/deliver-multi-customer.yml'
-      - '/jobs/docker/build-pip.yml'
+      - "/pipelines/customers/dams/deliver-multi-customer.yml"
+      - "/jobs/docker/build-pip.yml"
 
-
+# variables:
+#   PROJECT: 'dams'
+#   APPLICATION: 'storage'
+#
+#   HARBOR_PROJECT_DEV: elody-dams-dev
+#
+# customers:
+#   parallel:
+#     matrix:
+#       - CUSTOMER:
+#         - amvb
+#         - coghent
+#         - digipolis
+#         - vliz
+#         - imec
+#
 variables:
-  PROJECT: 'dams'
-  APPLICATION: 'storage'
+  CUSTOMER: inuits
+  PROJECT: dams
+  APPLICATION: storage
+
+  SKIP_DEPLOY: "true"
 
   HARBOR_PROJECT_DEV: elody-dams-dev
+  TARGET_CLUSTER_DEV: inuits-prod
 
-customers:
-  parallel:
-    matrix:
-      - CUSTOMER:
-        - amvb
-        - coghent
-        - digipolis
-        - vliz
-        - imec
+# --------------------------------------------------------------
+# Template overrides
+# --------------------------------------------------------------
+
+# Only run pipeline for default branch, otherwise require manual approval
+build:
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: always
+    - if: "$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH"
+      when: manual
+
+# Disable uat, not needed
+uat:
+  rules:
+    - when: never
+
+# Disable prod, not needed
+prod:
+  rules:
+    - when: never
