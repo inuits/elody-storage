@@ -8,10 +8,71 @@
       "enabled": true
     },
     {
-      "description": "Disable specific packages",
+      "description": "Disable specific packages (amqpstorm-flask needs to pass correct timestamps)",
       "matchManagers": ["pip_requirements", "pep621"],
       "matchPackageNames": ["AMQPStorm"],
       "enabled": false
+    },
+    {
+      "description": "Group AWS & Boto3 packages",
+      "matchPackageNames": ["boto3", "botocore", "s3transfer", "jmespath"],
+      "matchPackagePatterns": ["^boto3-stubs"],
+      "groupName": "AWS ecosystem"
+    },
+    {
+      "description": "Group Flask and Web Server packages",
+      "matchPackageNames": [
+        "Werkzeug",
+        "Jinja2",
+        "MarkupSafe",
+        "itsdangerous",
+        "gunicorn",
+        "blinker"
+      ],
+      "matchPackagePatterns": ["^Flask", "^flask-"],
+      "groupName": "Flask ecosystem"
+    },
+    {
+      "description": "Group RabbitMQ and AMQP packages",
+      "matchPackageNames": ["pamqp", "pika"],
+      "matchPackagePatterns": ["^amqpstorm-", "^rabbitmq-"],
+      "groupName": "RabbitMQ ecosystem"
+    },
+    {
+      "description": "Group HTTP Request packages",
+      "matchPackageNames": ["requests", "urllib3", "certifi", "idna", "charset-normalizer"],
+      "groupName": "HTTP & Requests"
+    },
+    {
+      "description": "Group Auth & Security packages",
+      "matchPackageNames": [
+        "Authlib",
+        "cryptography",
+        "inuits-policy-based-auth",
+        "cffi",
+        "pycparser"
+      ],
+      "groupName": "Auth & Security"
+    },
+    {
+      "description": "Group Date, Time & Scheduling",
+      "matchPackageNames": ["apscheduler", "python-dateutil", "pytz", "aniso8601"],
+      "groupName": "Date & Time"
+    },
+    {
+      "description": "Group Testing packages",
+      "matchPackageNames": [
+        "coverage",
+        "iniconfig",
+        "moto",
+        "pluggy",
+        "pytest",
+        "PyYAML",
+        "responses",
+        "xmltodict",
+        "py"
+      ],
+      "groupName": "Testing ecosystem"
     }
   ]
 }
