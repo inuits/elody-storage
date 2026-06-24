@@ -3,8 +3,11 @@ include:
   - project: "inuits/gitlab-ci/pipeline-templates"
     ref: "v4.20.0"
     file:
-      - "/pipelines/customers/dams/deliver-multi-customer.yml"
-      - "/jobs/docker/build-pip.yml"
+      - "pipelines/customers/deploy.yml"
+      - "jobs/docker/build-pip.yml"
+    # file:
+    #   - "/pipelines/customers/dams/deliver-multi-customer.yml"
+    #   - "/jobs/docker/build-pip.yml"
 
 # variables:
 #   PROJECT: 'dams'
