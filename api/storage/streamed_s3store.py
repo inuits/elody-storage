@@ -79,8 +79,9 @@ class StreamedS3Store:
                 filename, file_info["md5sum"], bucket_name=bucket_name
             )
             is_duplicate = False
-        except DuplicateFileException:
+        except DuplicateFileException as exception:
             self.abort_stream(stream_id=stream_id, key=key)
+            filename = str(exception).split("existing_file:")[-1].split(" ")[0]
             is_duplicate = True
         else:
             parts = [
