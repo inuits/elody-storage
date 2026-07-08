@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 from cloudevents.v1.conversion import to_dict
 from cloudevents.v1.http import CloudEvent
 from dateutil import parser
-from elody.error_codes import ErrorCode, get_error_code, get_write
+from elody.error_codes import ErrorCode, get_alert, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
     EmptyFileException,
@@ -25,11 +25,11 @@ from PIL import ExifTags, Image, TiffImagePlugin
 from pymediainfo import MediaInfo
 from rabbit import get_rabbit
 
-NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in [
+NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in {
     "true",
     "True",
     True,
-]
+}
 ROUTING_KEY_PREFIX = os.getenv("ROUTING_KEY_PREFIX", "dams")
 
 Image.MAX_IMAGE_PIXELS = None
@@ -518,7 +518,7 @@ class S3StorageManager:
             ):  # cannot detect based on mimetype, since mimetype of all emtpy files is "aplication/x-empty"
                 message = f"File {key} is empty."
                 raise EmptyFileException(
-                    f"{get_error_code(ErrorCode.EMPTY_FILE, get_write())} {message}",
+                    f"{get_error_code(ErrorCode.EMPTY_FILE, get_alert())} {message}",
                     key,
                 )
             raise Exception("Empty file, upload aborted")
