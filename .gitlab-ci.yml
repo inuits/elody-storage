@@ -34,13 +34,20 @@ variables:
 
   HARBOR_PROJECT_DEV: elody-dams-dev
   TARGET_CLUSTER_DEV: inuits-prod
+  UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
 
 # --------------------------------------------------------------
 # Template overrides
 # --------------------------------------------------------------
 
+.build:
+  variables:
+    # PODMAN_EXTRA_FLAGS: --build-arg UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
+    DOCKER_EXTRA_BUILD_FLAGS: --build-arg UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
 # Only run pipeline for default branch, otherwise require manual approval
 build:
+  variables:
+    DOCKERFILE: docker/uv.Dockerfile
   rules:
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: always
