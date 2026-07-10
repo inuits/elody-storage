@@ -516,9 +516,8 @@ class S3StorageManager:
             if (
                 key.split(".")[-1] == "txt"
             ):  # cannot detect based on mimetype, since mimetype of all emtpy files is "aplication/x-empty"
-                message = f"File {key} is empty."
                 raise EmptyFileException(
-                    f"{get_error_code(ErrorCode.EMPTY_FILE, get_alert())} {message}",
+                    f"{get_error_code(ErrorCode.EMPTY_FILE, get_alert())} | filename:{key} - Mediafile with filename {key} is empty",
                     key,
                 )
             raise Exception("Empty file, upload aborted")
