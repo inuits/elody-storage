@@ -12,7 +12,12 @@ from botocore.exceptions import ClientError
 from cloudevents.v1.conversion import to_dict
 from cloudevents.v1.http import CloudEvent
 from dateutil import parser
-from elody.error_codes import ErrorCode, get_alert, get_error_code, get_write
+from elody.error_codes import (
+    ErrorCode,
+    # get_alert,
+    get_error_code,
+    get_write,
+)
 from elody.exceptions import (
     DuplicateFileException,
     EmptyFileException,
@@ -518,7 +523,8 @@ class S3StorageManager:
             ):  # cannot detect based on mimetype, since mimetype of all emtpy files is "aplication/x-empty"
                 message = f"File {key} is empty."
                 raise EmptyFileException(
-                    f"{get_error_code(ErrorCode.EMPTY_FILE, get_alert())} {message}",
+                    f"{get_error_code(ErrorCode.EMPTY_FILE, 'A-')} {message}",
+                    # f"{get_error_code(ErrorCode.EMPTY_FILE, get_alert())} {message}",
                     key,
                 )
             raise Exception("Empty file, upload aborted")
