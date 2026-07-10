@@ -15,7 +15,7 @@ RUN apk add --no-cache libmagic libmediainfo && adduser --disabled-password --ho
 USER app
 WORKDIR /app
 
-COPY docker/entrypoint*.sh /
+COPY docker/entrypoint_uv.sh /
 COPY docker/run-tests.sh /
 COPY docker/test-coverage.sh /
 COPY requirements.txt ./
