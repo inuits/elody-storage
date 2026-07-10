@@ -23,7 +23,7 @@ COPY requirements_dev.txt ./
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-ENTRYPOINT ["/uv_entrypoint.sh"]
+ENTRYPOINT ["/entrypoint_uv.sh"]
 
 ### Development stage
 FROM base-stage AS development-stage
