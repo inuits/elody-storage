@@ -277,10 +277,14 @@ class S3StorageManager:
         mediafile["mimetype"] = mimetype
         if exif_data:
             mediafile["technical_metadata"] = exif_data
-        self.session.put(
+        app.logger.info(
+            f"Trying to update mediafile information with url: {self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}"
+        )
+        resp = self.session.put(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=mediafile,
         )
+        resp.raise_for_status()
         if (
             file_content
             and mimetype == "text/plain"
