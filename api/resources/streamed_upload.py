@@ -16,7 +16,7 @@ class InitStream(BaseResource):
             return {"stream_id": stream_id, "mediafile_id": mediafile_id}, 200
         except BadRequest as ex:
             return str(ex), 400
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 500
 
 
@@ -33,7 +33,7 @@ class SignChunk(BaseResource):
             return {"upload_url": upload_url}, 200
         except BadRequest as ex:
             return str(ex), 400
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 500
 
 
@@ -51,7 +51,7 @@ class StreamStatus(BaseResource):
             return {"uploaded_chunks": uploaded_chunks}, 200
         except BadRequest as ex:
             return str(ex), 400
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 500
 
 
@@ -73,7 +73,7 @@ class CompleteStream(BaseResource):
             return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
         except BadRequest as ex:
             return str(ex), 400
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 500
 
 
@@ -88,5 +88,5 @@ class AbortStream(BaseResource):
             return {}, 204
         except BadRequest as ex:
             return str(ex), 400
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 500

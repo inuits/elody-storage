@@ -21,6 +21,11 @@ from inuits_policy_based_auth.exceptions import NoUserContextException
 from rabbit import get_rabbit
 from storage.storagemanager import StorageManager
 from storage.streamed_storagemanager import StreamedStorageManager
+from storage_exceptions import (
+    ExpiredTicketException,
+    MissingFilenameException,
+    MissingTicketIdException,
+)
 from werkzeug.datastructures import Headers
 
 
@@ -65,7 +70,7 @@ class BaseResource(Resource):
         if request.files:
             file = request.files["file"]
         else:
-            file = tempfile.NamedTemporaryFile(mode="ab+")
+            file = tempfile.NamedTemporaryFile(mode="ab+")  # noqa: SIM115
             shutil.copyfileobj(request.stream, file)
             file.seek(0)
         return file
@@ -80,13 +85,13 @@ class BaseResource(Resource):
             return file.filename
         if getattr(file, "name", None):
             return file.name
-        raise Exception(
+        raise MissingFilenameException(
             f"{get_error_code(ErrorCode.NO_FILENAME_SPECIFIED, get_write())} Could not determine filename for upload",
         )
 
     def _get_ticket(self, ticket_id, api_key_hash=None):
         if not ticket_id:
-            raise Exception(
+            raise MissingTicketIdException(
                 f"{get_error_code(ErrorCode.NO_TICKET_ID_SPECIFIED, get_write())} No ticket id given",
             )
         request_url = f"{self.collection_api_url}/tickets/{ticket_id}"
@@ -108,7 +113,7 @@ class BaseResource(Resource):
             response.raise_for_status()
         ticket = response.json()
         if ticket.get("is_expired", True):
-            raise Exception(
+            raise ExpiredTicketException(
                 f"{get_error_code(ErrorCode.TICKET_EXPIRED, get_write())} Ticket is expired",
             )
         return ticket
@@ -225,7 +230,7 @@ class BaseResource(Resource):
                     get_rabbit=get_rabbit,
                 )
                 return ex.message, 422
-        except (DuplicateFileException, Exception) as ex:
+        except (DuplicateFileException, Exception) as ex:  # ruff: ignore[BLE001]
             if file:
                 file.close()
             if job_id:

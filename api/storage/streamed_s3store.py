@@ -8,6 +8,7 @@ from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import DuplicateFileException
 from mypy_boto3_s3.client import S3Client
 from mypy_boto3_s3.service_resource import S3ServiceResource
+from storage_exceptions import MissingBucketnameException
 
 
 class StreamedS3Store:
@@ -132,6 +133,6 @@ class StreamedS3Store:
     def __get_bucket(self):
         if bucket := getenv("MINIO_BUCKET"):
             return bucket
-        raise Exception(
+        raise MissingBucketnameException(
             f"{get_error_code(ErrorCode.NO_BUCKET_SPECIFIED, get_write())} No bucket for upload was specified"
         )

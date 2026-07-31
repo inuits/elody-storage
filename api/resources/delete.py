@@ -10,7 +10,7 @@ class Delete(BaseResource):
     def delete(self, key):
         try:
             self.storage.delete_files([key])
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             logger.error(f"Deleting {key} failed with: {ex}")
             return str(ex), 400
         return "", 204
@@ -27,7 +27,7 @@ class DeleteMultiple(BaseResource):
         files = self.__get_request_body()
         try:
             self.storage.delete_files(files)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             logger.error(f"Deleting {files} failed with: {ex}")
             return str(ex), 400
         return "", 204

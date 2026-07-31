@@ -15,7 +15,7 @@ from inuits_policy_based_auth.exceptions import NoUserContextException
 from rabbit import get_rabbit, init_rabbit
 from storage.storagemanager import StorageManager
 
-if os.getenv("GLITCH_TIP_ENABLED", False) in ["True", "true", True]:
+if os.getenv("GLITCH_TIP_ENABLED", "False") in {"True", "true", True}:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
 
@@ -102,19 +102,16 @@ def storage_available():
 
 
 health = HealthCheck()
-if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
+if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", "True") in {"True", "true", True}:
     health.add_check(rabbit_available)
     health.add_check(storage_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 
 def get_user_context():
-    try:
-        user_context = g.get("user_context")
-        if not user_context:
-            raise NoUserContextException()
-    except Exception as exception:
-        raise exception
+    user_context = g.get("user_context")
+    if not user_context:
+        raise NoUserContextException()
 
     return user_context
 
@@ -131,23 +128,23 @@ try:
 except ModuleNotFoundError:
     load_policies(policy_factory, logger)
 
-# TODO (tim.standaert): E402 is disabled here because of circular imports when placed at the  # noqa: FIX002
+# TODO (tim.standaert): E402 is disabled here because of circular imports when placed at the  # ruff: ignore[FIX002]
 # top of the filename These should be moved to another file like in the
 # collection api (init_api or something), but even then we would
 # streamed_upload to import that here, otherwise there's issues with the fact
 # that the policy_factory is defined here, which should then also be moved,
 # which is a bit much
-from resources.download import Download, DownloadWithTicket  # noqa: E402
-from resources.spec import AsyncAPISpec, OpenAPISpec  # noqa: E402
-from resources.streamed_upload import (  # noqa: E402
+from resources.download import Download, DownloadWithTicket  # ruff: ignore[E402]
+from resources.spec import AsyncAPISpec, OpenAPISpec  # ruff: ignore[E402]
+from resources.streamed_upload import (  # ruff: ignore[E402]
     AbortStream,
     CompleteStream,
     InitStream,
     SignChunk,
     StreamStatus,
 )
-from resources.unique import Unique  # noqa: E402
-from resources.upload import (  # noqa: E402
+from resources.unique import Unique  # ruff: ignore[E402]
+from resources.upload import (  # ruff: ignore[E402]
     Upload,
     UploadKey,
     UploadKeyWithTicket,

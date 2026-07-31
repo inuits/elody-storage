@@ -28,6 +28,6 @@ class DownloadWithTicket(BaseResource):
             ticket = self._get_ticket(
                 request.args.get("ticket_id"), request.args.get("api_key_hash")
             )
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 400
         return self._handle_file_download(key, ticket=ticket)

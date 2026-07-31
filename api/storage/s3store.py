@@ -24,6 +24,7 @@ from humanfriendly import parse_size
 from PIL import ExifTags, Image, TiffImagePlugin
 from pymediainfo import MediaInfo
 from rabbit import get_rabbit
+from storage_exceptions import ForbiddenMimetypeException, MissingBucketnameException
 
 NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in {
     "true",
@@ -47,7 +48,11 @@ class S3StorageManager:
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.headers = None
         self.session = requests.Session()
-        self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", True)
+        self.duplicate_file_check = os.getenv("DUPLICATE_FILE_CHECK", "True") in {
+            True,
+            "true",
+            "True",
+        }
         self.access_control_list = (
             (os.getenv("ACCESS_CONTROL_LIST") or "").lower().strip().split(",")
         )
@@ -143,7 +148,7 @@ class S3StorageManager:
             elif "Video" in track_types:
                 return current_mime
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             return current_mime
         finally:
             file.seek(0)
@@ -224,7 +229,9 @@ class S3StorageManager:
         elif self.access_control_type == "deny":
             has_access_control = mimetype not in self.access_control_list
         if not has_access_control:
-            raise Exception(f"File mimetype {mimetype} is not allowed.")
+            raise ForbiddenMimetypeException(
+                f"File mimetype {mimetype} is not allowed."
+            )
 
     def __signal_file_uploaded(
         self,
@@ -319,7 +326,7 @@ class S3StorageManager:
             app.logger.error(
                 f"Received weird response from collection-api:\nstatus_code: {req.status_code}\nresponse content: {req.json()}"
             )
-            raise Exception(
+            raise NotFoundException(
                 f"{get_error_code(ErrorCode.MEDIAFILE_NOT_FOUND, get_write())} Something went wrong while getting mediafile "
             )
 
@@ -439,7 +446,7 @@ class S3StorageManager:
             return ticket["bucket"]
         if bucket := os.getenv("MINIO_BUCKET"):
             return bucket
-        raise Exception(
+        raise MissingBucketnameException(
             f"{get_error_code(ErrorCode.NO_BUCKET_SPECIFIED, get_write())} No bucket for upload was specified"
         )
 
@@ -524,7 +531,7 @@ class S3StorageManager:
                     f"{get_error_code(ErrorCode.EMPTY_FILE, get_alert())} | filename:{key} - Mediafile with filename {key} is empty",
                     key,
                 )
-            raise Exception("Empty file, upload aborted")
+            raise EmptyFileException("Empty file, upload aborted")
         file_content = self.__get_file_content(file, mimetype)
         exif_data = self._get_exif_data(file) if mimetype.startswith("image") else []
         mediafile["file_creation_date"] = self._check_keys_and_extract_creation_dates(
@@ -580,7 +587,7 @@ class S3StorageManager:
     ):
         md5sum = self.__calculate_md5(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
-            raise Exception("Empty file, upload aborted")
+            raise EmptyFileException("Empty file, upload aborted")
         key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
         mimetype = self.__get_file_mimetype(file, key)
         try:
@@ -588,9 +595,9 @@ class S3StorageManager:
             self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
                 Fileobj=file, Key=key
             )
-        except DuplicateFileException as ex:
+        except DuplicateFileException:
             if not ignore_duplicate_check or not NEW_STORAGE_ENABLED:
-                raise ex
+                raise
 
         new_key = key.split("/")[-1]
         original_filename = self.__get_filename_from_key(key)
@@ -622,7 +629,7 @@ class S3StorageManager:
                 },
             ).raise_for_status()
         except Exception as ex:
-            raise Exception(str(ex)) from ex
+            raise Exception(str(ex)) from ex  # noqa: TRY002
 
     def __get_filename_from_key(self, key):
         uuid_pattern = re.compile(r"[0-9a-fA-F]{32}-")

@@ -79,5 +79,5 @@ def remove_file_from_storage(routing_key, body, message_id):
         files.append(data["mediafile"]["transcode_filename"])
     try:
         StorageManager().get_storage_engine().delete_files(files)
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         logger.error(f"Deleting {files} failed with: {ex}")

@@ -18,7 +18,7 @@ class UploadWithTicket(BaseResource):
             ticket = self._get_ticket(request.args.get("ticket_id"))
             parent_job_id = request.args.get("parent_job_id")
             user = self.get_user_from_request_and_ticket(request, ticket)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 400
 
         return self._handle_file_upload(
@@ -40,7 +40,7 @@ class UploadKeyWithTicket(BaseResource):
             ticket = self._get_ticket(request.args.get("ticket_id"))
             parent_job_id = request.args.get("parent_job_id")
             user = self.get_user_from_request_and_ticket(request, ticket)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 400
 
         return self._handle_file_upload(
@@ -74,5 +74,5 @@ class UploadTranscode(BaseResource):
                     user=user,
                     ignore_duplicate_check=ignore_duplicate_check,
                 )
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 400
