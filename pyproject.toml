@@ -74,6 +74,7 @@ ignore = [
   "A003",   # Allow class attributes to shadow built-ins (e.g., model.id)
   "B006",   # Allow mutables as default arg: This actually needs to be fixed since it can cause bugs but generally we don't use it in a way that can actually cause bugs
   "RUF012", # Allow mutables as default class member: This actually needs to be fixed since it can cause bugs
+  "RUF106", # Checks for using rule code instead of rule name,
   "E722",   # Allow bare excepts (we don't have enough custom exceptions)
   "E501",   # Ignore line length (let the formatter handle this)
 ]
