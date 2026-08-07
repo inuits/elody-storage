@@ -148,6 +148,7 @@ from resources.upload import (  # ruff: ignore[E402]
     Upload,
     UploadKey,
     UploadKeyWithTicket,
+    UploadThumbnail,
     UploadTranscode,
     UploadWithTicket,
 )
@@ -168,6 +169,7 @@ api.add_resource(UploadWithTicket, "/upload-with-ticket")
 api.add_resource(UploadKey, "/upload/<string:key>")
 api.add_resource(UploadKeyWithTicket, "/upload-with-ticket/<string:key>")
 api.add_resource(UploadTranscode, "/upload/transcode")
+api.add_resource(UploadThumbnail, "/upload/thumbnail")
 
 api.add_resource(AsyncAPISpec, "/spec/dams-csv-importer-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-storage-api.json")

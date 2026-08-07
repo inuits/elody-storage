@@ -1,4 +1,5 @@
 from app import policy_factory
+from constants_storage import TechnicalOrigins
 from flask import request
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource
@@ -61,7 +62,7 @@ class UploadTranscode(BaseResource):
             if ticket_id:
                 ticket = self._get_ticket(ticket_id)
                 return self._handle_file_upload(
-                    transcode=True,
+                    technical_origin=TechnicalOrigins.TRANSCODE,
                     ticket=ticket,
                     parent_job_id=parent_job_id,
                     user=user,
@@ -69,7 +70,37 @@ class UploadTranscode(BaseResource):
                 )
             else:
                 return self._handle_file_upload(
-                    transcode=True,
+                    technical_origin=TechnicalOrigins.TRANSCODE,
+                    parent_job_id=parent_job_id,
+                    user=user,
+                    ignore_duplicate_check=ignore_duplicate_check,
+                )
+        except Exception as ex:  # noqa: BLE001
+            return str(ex), 400
+
+
+class UploadThumbnail(BaseResource):
+    @policy_factory.authenticate(RequestContext(request))
+    def post(self):
+        try:
+            ticket_id = request.args.get("ticket_id")
+            parent_job_id = request.args.get("parent_job_id")
+            ignore_duplicate_check = bool(
+                request.args.get("ignore_duplicate_check", False)
+            )
+            user = self.get_user_from_request_and_ticket(request)
+            if ticket_id:
+                ticket = self._get_ticket(ticket_id)
+                return self._handle_file_upload(
+                    technical_origin=TechnicalOrigins.THUMBNAIL,
+                    ticket=ticket,
+                    parent_job_id=parent_job_id,
+                    user=user,
+                    ignore_duplicate_check=ignore_duplicate_check,
+                )
+            else:
+                return self._handle_file_upload(
+                    technical_origin=TechnicalOrigins.THUMBNAIL,
                     parent_job_id=parent_job_id,
                     user=user,
                     ignore_duplicate_check=ignore_duplicate_check,

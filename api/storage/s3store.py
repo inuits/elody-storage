@@ -11,6 +11,7 @@ import requests
 from botocore.exceptions import ClientError
 from cloudevents.v1.conversion import to_dict
 from cloudevents.v1.http import CloudEvent
+from constants_storage import TechnicalOrigins
 from dateutil import parser
 from elody.error_codes import ErrorCode, get_alert, get_error_code, get_write
 from elody.exceptions import (
@@ -450,11 +451,23 @@ class S3StorageManager:
             f"{get_error_code(ErrorCode.NO_BUCKET_SPECIFIED, get_write())} No bucket for upload was specified"
         )
 
-    def __get_key(self, key, md5sum=None, ticket=None, transcode=False):
+    def __get_key(
+        self,
+        key,
+        md5sum=None,
+        ticket=None,
+        technical_origin: TechnicalOrigins = TechnicalOrigins.ORIGINAL,
+    ):
         input_key = ticket["location"] if ticket else key
         split_key = input_key.split("/")
-        if transcode:
-            split_key[-1] = f"transcode-{split_key[-1]}"
+        match technical_origin:
+            case TechnicalOrigins.TRANSCODE:
+                split_key[-1] = f"{TechnicalOrigins.TRANSCODE.value}-{split_key[-1]}"
+            case TechnicalOrigins.THUMBNAIL:
+                split_key[-1] = f"{TechnicalOrigins.THUMBNAIL.value}-{split_key[-1]}"
+            case _:
+                pass
+
         if md5sum:
             split_key[-1] = f"{md5sum}-{split_key[-1]}"
         return "/".join(split_key)
@@ -588,7 +601,12 @@ class S3StorageManager:
         md5sum = self.__calculate_md5(file)
         if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
             raise EmptyFileException("Empty file, upload aborted")
-        key = self.__get_key(key, md5sum=md5sum, transcode=True, ticket=ticket)
+        key = self.__get_key(
+            key,
+            md5sum=md5sum,
+            technical_origin=TechnicalOrigins.TRANSCODE,
+            ticket=ticket,
+        )
         mimetype = self.__get_file_mimetype(file, key)
         try:
             self.check_file_exists(key, md5sum)
@@ -624,6 +642,66 @@ class S3StorageManager:
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 json={
                     "display_filename": key,
+                    "schema": {"type": "elody"},
+                    "type": "mediafile",
+                },
+            ).raise_for_status()
+        except Exception as ex:
+            raise Exception(str(ex)) from ex  # noqa: TRY002
+
+    def upload_thumbnail(
+        self,
+        file,
+        mediafile_id,
+        key,
+        ticket,
+        ignore_duplicate_check: bool = False,
+    ):
+        md5sum = self.__calculate_md5(file)
+        if md5sum == "d41d8cd98f00b204e9800998ecf8427e":
+            raise EmptyFileException("Empty file, upload aborted")
+        key = self.__get_key(
+            key,
+            md5sum=md5sum,
+            technical_origin=TechnicalOrigins.THUMBNAIL,
+            ticket=ticket,
+        )
+        mimetype = self.__get_file_mimetype(file, key)
+        try:
+            self.check_file_exists(key, md5sum)
+            self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
+                Fileobj=file, Key=key
+            )
+        except DuplicateFileException:
+            if not ignore_duplicate_check or not NEW_STORAGE_ENABLED:
+                raise
+
+        new_key = key.split("/")[-1]
+        original_filename = self.__get_filename_from_key(key)
+
+        data = {
+            "filename": key,
+            "md5sum": md5sum,
+            "transcode_file_location": f"/download/{new_key}",
+            "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+            "original_filename": original_filename,
+            "technical_origin": "thumbnail",
+            "mimetype": mimetype,
+        }
+        bucket = self.__get_bucket_name(ticket)
+        data["filesize"] = self.__get_filesize_s3(key, bucket) or self.__get_filesize(
+            file
+        )
+        try:
+            self.session.post(
+                f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
+                json=data,
+            ).raise_for_status()
+            self.session.patch(
+                f"{self.collection_api_url}/mediafiles/{mediafile_id}",
+                json={
+                    "thumbnail_filename": key,
+                    "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
                     "schema": {"type": "elody"},
                     "type": "mediafile",
                 },

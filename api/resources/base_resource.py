@@ -6,6 +6,7 @@ from time import sleep
 
 import requests
 from app import get_user_context
+from constants_storage import TechnicalOrigins
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import (
     DuplicateFileException,
@@ -169,8 +170,8 @@ class BaseResource(Resource):
     def _handle_file_upload(
         self,
         key=None,
-        transcode=False,
-        ticket=None,
+        technical_origin: TechnicalOrigins = TechnicalOrigins.ORIGINAL,
+        ticket: dict | None = None,
         parent_job_id=None,
         user=None,
         ignore_duplicate_check=False,
@@ -206,22 +207,31 @@ class BaseResource(Resource):
                 track_async_children=True,
             )
             start_job(job_id, get_rabbit=get_rabbit)
-            if transcode:
-                self.storage.upload_transcode(
-                    file,
-                    mediafile_id,
-                    key,
-                    ticket,
-                    ignore_duplicate_check,
-                )
-            else:
-                self.storage.upload_file(
-                    file,
-                    mediafile_id,
-                    key,
-                    ticket,
-                    parent_job_id=job_id,
-                )
+            match technical_origin:
+                case TechnicalOrigins.TRANSCODE:
+                    self.storage.upload_transcode(
+                        file,
+                        mediafile_id,
+                        key,
+                        ticket,
+                        ignore_duplicate_check,
+                    )
+                case TechnicalOrigins.THUMBNAIL:
+                    self.storage.upload_thumbnail(
+                        file,
+                        mediafile_id,
+                        key,
+                        ticket,
+                        ignore_duplicate_check,
+                    )
+                case _:
+                    self.storage.upload_file(
+                        file,
+                        mediafile_id,
+                        key,
+                        ticket,
+                        parent_job_id=job_id,
+                    )
         except EmptyFileException as ex:
             if job_id:
                 finish_job_with_warning(
