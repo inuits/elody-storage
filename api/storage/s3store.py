@@ -2,6 +2,7 @@ import hashlib
 import io
 import os
 import re
+from datetime import datetime
 from urllib.parse import urlparse
 
 import app
@@ -501,22 +502,30 @@ class S3StorageManager:
 
     def _check_keys_and_extract_creation_dates(self, exif_data):
         keys_to_check = [
+            "DateTimeOriginal",
+            "DateTimeDigitized",
             "exif_datetime",
             "Xmp.xmp.CreateDate",
             "Xmp.xmp.MetadataDate",
             "Xmp.dc.date",
-            "DateTimeDigitized",
-            "DateTimeOriginal",
         ]
-        for item in exif_data:
-            if item["key"] in keys_to_check:
-                date_str = item["value"]
-                try:
-                    date_obj = parser.parse(date_str)
-                    iso_date_str = date_obj.isoformat()
-                    return iso_date_str
-                except ValueError:
-                    return date_str
+        values_by_key = {item["key"]: item["value"] for item in exif_data}
+        for key in keys_to_check:
+            date_str = values_by_key.get(key)
+            if not date_str:
+                continue
+            try:
+                # exif writes dates as "2025:07:28 15:38:50", which dateutil reads as
+                # a time only, silently dating the mediafile today
+                return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S").isoformat()
+            except ValueError:
+                pass
+            try:
+                return parser.parse(date_str).isoformat()
+            except (ValueError, OverflowError):
+                # ponytail: an unparsable date is dropped so the field stays a single
+                # type and remains sortable
+                continue
         return None
 
     def upload_file(
