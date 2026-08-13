@@ -5,6 +5,7 @@ apscheduler==3.11.2
 Authlib==1.7.2
 blinker==1.9.0
 boto3==1.35.40
+boto3-stubs[s3]==1.35.40
 botocore==1.35.40
 certifi==2024.8.30
 cffi==2.0.0
