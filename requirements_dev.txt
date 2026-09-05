@@ -6,7 +6,7 @@ pytest==9.0.3
 PyYAML==6.0.2
 responses==0.25.3
 xmltodict==0.14.1
-boto3-stubs[s3]==1.35.40
+boto3-stubs[s3]==1.43.89
 types-requests==2.33.0.20260712
 types-decorator==5.2.0.20260712
 types-humanfriendly==10.0.1.20250319
