@@ -1,15 +1,13 @@
 from contextlib import closing
 from io import BytesIO
 from os import getenv
+from typing import TYPE_CHECKING
 
 from boto3 import client, resource
 from botocore.config import Config
 from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import DuplicateFileException
 from storage_exceptions import MissingBucketnameException
-
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client

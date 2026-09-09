@@ -517,7 +517,11 @@ class S3StorageManager:
             try:
                 # exif writes dates as "2025:07:28 15:38:50", which dateutil reads as
                 # a time only, silently dating the mediafile today
-                return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S").isoformat()
+                return (
+                    datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+                    .astimezone()
+                    .isoformat()
+                )
             except ValueError:
                 pass
             try:
