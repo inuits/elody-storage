@@ -189,19 +189,21 @@ class S3StorageManager:
             found_mediafile = self._get_mediafile(md5sum)
         except NotFoundException as nerr:
             self.__update_mediafile_information(mediafile, md5sum, filename, mimetype)
-            message = (
+            app.logger.info(
                 f"{message} No existing mediafile for file found, not deleting new one."
             )
             raise DuplicateFileException(
-                f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
+                f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_alert())} {message.removeprefix(get_error_code(ErrorCode.DUPLICATE_FILE, get_write())).strip()}"
             ) from nerr
         mediafile_id = self.__get_raw_id(mediafile)
         if self.__get_raw_id(found_mediafile) != mediafile_id:
             self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
-            message = f"{message} Existing mediafile for file found, deleting new one."
+            app.logger.info(
+                f"{message} Existing mediafile for file found, deleting new one."
+            )
         if self.is_metadata_updated(found_mediafile, mediafile):
             # NOTE: So this currently means the last seen filename is used.
-            message = f"{message} Metadata not up-to-date, updating."
+            app.logger.info(f"{message} Metadata not up-to-date, updating.")
             payload = {
                 "metadata": mediafile.get("metadata", []),
                 "schema": {"type": "elody"},
@@ -214,14 +216,14 @@ class S3StorageManager:
             self.are_relations_updated(found_mediafile, mediafile)
             and NEW_STORAGE_ENABLED
         ):
-            message = f"{message} Relations not up-to-date, updating."
+            app.logger.info(f"{message} Relations not up-to-date, updating.")
             relations_payload = self.get_relations_payload(found_mediafile, mediafile)
             self.session.put(
                 f"{self.collection_api_url}/mediafiles/{md5sum}/relations",
                 json=relations_payload,
             )
         raise DuplicateFileException(
-            f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {message}"
+            f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_alert())} {message.removeprefix(get_error_code(ErrorCode.DUPLICATE_FILE, get_write())).strip()}"
         )
 
     def __validate_mimetype_access_control(self, mimetype):
