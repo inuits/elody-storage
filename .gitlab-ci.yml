@@ -55,6 +55,10 @@ build:
       when: manual
 
 # Disable uat, not needed
+
+dev:
+  rules:
+    - when: never
 uat:
   rules:
     - when: never
