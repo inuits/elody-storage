@@ -2,7 +2,7 @@ from app import logger, policy_factory
 from flask import request
 from flask_restful import abort
 from inuits_policy_based_auth import RequestContext
-from resources.base_resource import BaseResource
+from resources.base_resource import BaseResource, client_error_message
 
 
 class Delete(BaseResource):
@@ -12,7 +12,7 @@ class Delete(BaseResource):
             self.storage.delete_files([key])
         except Exception as ex:  # noqa: BLE001
             logger.error(f"Deleting {key} failed with: {ex}")
-            return str(ex), 400
+            return client_error_message(ex), 400
         return "", 204
 
 
@@ -29,5 +29,5 @@ class DeleteMultiple(BaseResource):
             self.storage.delete_files(files)
         except Exception as ex:  # noqa: BLE001
             logger.error(f"Deleting {files} failed with: {ex}")
-            return str(ex), 400
+            return client_error_message(ex), 400
         return "", 204

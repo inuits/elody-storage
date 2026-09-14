@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import shutil
@@ -28,6 +29,30 @@ from storage_exceptions import (
     MissingTicketIdException,
 )
 from werkzeug.datastructures import Headers
+from werkzeug.exceptions import BadRequest
+
+
+logger = logging.getLogger(__name__)
+
+SAFE_EXCEPTIONS = (
+    BadRequest,
+    DuplicateFileException,
+    EmptyFileException,
+    ExpiredTicketException,
+    FileNotFoundException,
+    MissingFilenameException,
+    MissingTicketIdException,
+    NotFoundException,
+)
+
+
+# only our own exceptions carry client-safe text; anything else may embed
+# credentials (a bearer token, a signed url) in its message
+def client_error_message(exception):
+    if isinstance(exception, SAFE_EXCEPTIONS):
+        return str(exception)
+    logger.exception("Request failed", exc_info=exception)
+    return f"{get_error_code(ErrorCode.UNKNOWN_ERROR, get_write())} Something went wrong, check the storage-api logs"
 
 
 class BaseResource(Resource):
@@ -50,12 +75,14 @@ class BaseResource(Resource):
             tenant = get_user_context().x_tenant.id
         except NoUserContextException:
             tenant = request.headers.get("apikey", os.getenv("STATIC_APIKEY"))
+        # secrets often arrive with a trailing newline, which requests rejects
+        jwt = os.getenv("STATIC_JWT", "").strip()
         if tenant:
             return {
-                "Authorization": f"Bearer {os.getenv('STATIC_JWT')}",
-                "apikey": tenant,
+                "Authorization": f"Bearer {jwt}",
+                "apikey": str(tenant).strip(),
             }
-        return {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
+        return {"Authorization": f"Bearer {jwt}"}
 
     def __get_byte_range(self, range_header):
         g = re.search(r"(\d+)-(\d*)", range_header).groups()
@@ -243,9 +270,10 @@ class BaseResource(Resource):
         except (DuplicateFileException, Exception) as ex:  # ruff: ignore[BLE001]
             if file:
                 file.close()
+            message = client_error_message(ex)
             if job_id:
-                fail_job(job_id, str(ex), get_rabbit=get_rabbit)
-            return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
+                fail_job(job_id, message, get_rabbit=get_rabbit)
+            return message, 409 if isinstance(ex, DuplicateFileException) else 400
         finally:
             if file:
                 file.close()

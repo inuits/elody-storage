@@ -2,7 +2,7 @@ from app import policy_factory
 from constants_storage import TechnicalOrigins
 from flask import request
 from inuits_policy_based_auth import RequestContext
-from resources.base_resource import BaseResource
+from resources.base_resource import BaseResource, client_error_message
 
 
 class Upload(BaseResource):
@@ -20,7 +20,7 @@ class UploadWithTicket(BaseResource):
             parent_job_id = request.args.get("parent_job_id")
             user = self.get_user_from_request_and_ticket(request, ticket)
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 400
+            return client_error_message(ex), 400
 
         return self._handle_file_upload(
             ticket=ticket, parent_job_id=parent_job_id, user=user
@@ -42,7 +42,7 @@ class UploadKeyWithTicket(BaseResource):
             parent_job_id = request.args.get("parent_job_id")
             user = self.get_user_from_request_and_ticket(request, ticket)
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 400
+            return client_error_message(ex), 400
 
         return self._handle_file_upload(
             key=key, ticket=ticket, parent_job_id=parent_job_id, user=user
@@ -76,7 +76,7 @@ class UploadTranscode(BaseResource):
                     ignore_duplicate_check=ignore_duplicate_check,
                 )
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 400
+            return client_error_message(ex), 400
 
 
 class UploadThumbnail(BaseResource):
@@ -106,4 +106,4 @@ class UploadThumbnail(BaseResource):
                     ignore_duplicate_check=ignore_duplicate_check,
                 )
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 400
+            return client_error_message(ex), 400

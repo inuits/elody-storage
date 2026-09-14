@@ -1,7 +1,7 @@
 from app import policy_factory
 from flask import Response, request
 from inuits_policy_based_auth import RequestContext
-from resources.base_resource import BaseResource
+from resources.base_resource import BaseResource, client_error_message
 
 
 class Download(BaseResource):
@@ -29,5 +29,5 @@ class DownloadWithTicket(BaseResource):
                 request.args.get("ticket_id"), request.args.get("api_key_hash")
             )
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 400
+            return client_error_message(ex), 400
         return self._handle_file_download(key, ticket=ticket)

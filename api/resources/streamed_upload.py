@@ -2,7 +2,7 @@ from app import policy_factory
 from elody.exceptions import DuplicateFileException, EmptyFileException
 from flask import request
 from inuits_policy_based_auth import RequestContext
-from resources.base_resource import BaseResource
+from resources.base_resource import BaseResource, client_error_message
 from werkzeug.exceptions import BadRequest
 
 
@@ -17,7 +17,7 @@ class InitStream(BaseResource):
         except BadRequest as ex:
             return str(ex), 400
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 500
+            return client_error_message(ex), 500
 
 
 class SignChunk(BaseResource):
@@ -34,7 +34,7 @@ class SignChunk(BaseResource):
         except BadRequest as ex:
             return str(ex), 400
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 500
+            return client_error_message(ex), 500
 
 
 class StreamStatus(BaseResource):
@@ -52,7 +52,7 @@ class StreamStatus(BaseResource):
         except BadRequest as ex:
             return str(ex), 400
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 500
+            return client_error_message(ex), 500
 
 
 class CompleteStream(BaseResource):
@@ -74,7 +74,7 @@ class CompleteStream(BaseResource):
         except BadRequest as ex:
             return str(ex), 400
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 500
+            return client_error_message(ex), 500
 
 
 class AbortStream(BaseResource):
@@ -89,4 +89,4 @@ class AbortStream(BaseResource):
         except BadRequest as ex:
             return str(ex), 400
         except Exception as ex:  # noqa: BLE001
-            return str(ex), 500
+            return client_error_message(ex), 500
