@@ -134,6 +134,10 @@ class BaseResource(Resource):
                 continue
             break
         if response.status_code != 200:
+            # the body carries collection-api's reason; raise_for_status drops it
+            logger.error(
+                f"Ticket request failed with {response.status_code}: {response.text[:500]}",
+            )
             if response.status_code == 404:
                 raise NotFoundException(
                     f"{get_error_code(ErrorCode.TICKET_NOT_FOUND, get_write())} Ticket with id {ticket_id} not found",
