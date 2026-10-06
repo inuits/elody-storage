@@ -29,8 +29,7 @@ from storage_exceptions import (
     MissingTicketIdException,
 )
 from werkzeug.datastructures import Headers
-from werkzeug.exceptions import BadRequest
-
+from werkzeug.exceptions import BadRequest, LengthRequired
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ SAFE_EXCEPTIONS = (
 def client_error_message(exception):
     if isinstance(exception, SAFE_EXCEPTIONS):
         return str(exception)
-    logger.exception("Request failed", exc_info=exception)
+    logger.exception("Request failed", exc_info=exception)  # noqa: LOG004
     return f"{get_error_code(ErrorCode.UNKNOWN_ERROR, get_write())} Something went wrong, check the storage-api logs"
 
 
@@ -98,8 +97,18 @@ class BaseResource(Resource):
         if request.files:
             file = request.files["file"]
         else:
+            expected_size = request.content_length
+            if expected_size is None:
+                raise LengthRequired("Content-Length header is missing")
             file = tempfile.NamedTemporaryFile(mode="ab+")  # noqa: SIM115
             shutil.copyfileobj(request.stream, file)
+            file.seek(0, os.SEEK_END)
+            actual_size = file.tell()
+            if actual_size != expected_size:
+                file.close()
+                raise BadRequest(
+                    f"Upload interrupted. Expected {expected_size} bytes but got {actual_size} bytes"
+                )
             file.seek(0)
         return file
 
@@ -228,6 +237,9 @@ class BaseResource(Resource):
             file = self.__get_file_object()
             key = self.__get_key_for_file(key, file, ticket)
             parent_job_id = request.view_args.get("parent_job_id") or parent_job_id
+            # FIXME: this means the job only gets started when the file is fully
+            # uploaded, which isn't quite right, but we only know the key
+            # afterwards
             job_id = init_job(
                 f"Upload {key}",
                 "File upload",
