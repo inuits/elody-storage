@@ -27,7 +27,7 @@ class DeleteMultiple(BaseResource):
         files = self.__get_request_body()
         try:
             self.storage.delete_files(files)
-        except Exception as ex:  # noqa: BLE001
-            logger.error(f"Deleting {files} failed with: {ex}")
-            return client_error_message(ex), 400
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Deleting {files} failed with: {e}")
+            return client_error_message(e), 400
         return "", 204

@@ -86,7 +86,7 @@ class AbortStream(BaseResource):
                 stream_id=request_body["stream_id"], key=request_body["mediafile_id"]
             )
             return {}, 204
-        except BadRequest as ex:
-            return str(ex), 400
-        except Exception as ex:  # noqa: BLE001
-            return client_error_message(ex), 500
+        except BadRequest as e:
+            return str(e), 400
+        except Exception as e:  # noqa: BLE001
+            return client_error_message(e), 500

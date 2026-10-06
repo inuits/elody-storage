@@ -105,5 +105,5 @@ class UploadThumbnail(BaseResource):
                     user=user,
                     ignore_duplicate_check=ignore_duplicate_check,
                 )
-        except Exception as ex:  # noqa: BLE001
-            return client_error_message(ex), 400
+        except Exception as e:  # noqa: BLE001
+            return client_error_message(e), 400
