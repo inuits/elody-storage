@@ -274,3 +274,15 @@ def test_the_consumer_of_a_message_knows_for_whom_it_works():
     )
     assert consumer.attributes["elody.user"] == "p-1"
     assert consumer.attributes["elody.library"] == "brugge.be"
+
+
+def test_the_browser_tabs_session_is_on_every_span_by_the_browsers_name():
+    provider, exporter = provider_with_baggage()
+    token = context.attach(baggage.set_baggage("elody.session", "s-1"))
+    try:
+        provider.get_tracer("t").start_span("GET /entities").end()
+    finally:
+        context.detach(token)
+    (span,) = exporter.get_finished_spans()
+    assert span.attributes["session_id"] == "s-1"
+    assert "elody.session" not in span.attributes
