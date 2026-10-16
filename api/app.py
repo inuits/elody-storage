@@ -14,16 +14,7 @@ from inuits_policy_based_auth import PolicyFactory
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from rabbit import get_rabbit, init_rabbit
 from storage.storagemanager import StorageManager
-
-if os.getenv("GLITCH_TIP_ENABLED", "False") in {"True", "true", True}:
-    import sentry_sdk
-    from sentry_sdk.integrations.flask import FlaskIntegration
-
-    sentry_sdk.init(
-        dsn=os.getenv("GLITCH_TIP_DSN"),
-        integrations=[FlaskIntegration()],
-        environment=os.getenv("NOMAD_NAMESPACE"),
-    )
+from observability import init_observability
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = (
@@ -33,6 +24,7 @@ API_URL = (
 swaggerui_blueprint = get_swaggerui_blueprint(SWAGGER_URL, API_URL)
 
 app = Flask(__name__)
+init_observability(app)
 app.config["RESTFUL_JSON"] = {"cls": CustomJSONEncoder}
 api = Api(app)
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
