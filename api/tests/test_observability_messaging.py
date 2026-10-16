@@ -9,6 +9,7 @@ its hash is the message id.
 import json
 
 import pytest
+from opentelemetry import baggage, context
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
@@ -16,7 +17,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 )
 from opentelemetry.trace import SpanKind, StatusCode
 
-from observability import signal_enabled, traced_rabbit
+from observability import BaggageAttributes, signal_enabled, traced_rabbit
 
 
 class FakeMessage:
@@ -209,3 +210,67 @@ def test_no_rabbit_is_no_rabbit():
 )
 def test_each_signal_needs_a_collector_and_can_be_switched_off(signal, env, enabled):
     assert signal_enabled(signal, env) is enabled
+
+
+# The pseudonymous user and library of the request (elody.* baggage, set by the
+# GraphQL server) are on every span within it, and travel with a message.
+
+
+def provider_with_baggage():
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(BaggageAttributes())
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    return provider, exporter
+
+
+def in_request_of(user, library, run):
+    ctx = baggage.set_baggage("elody.user", user)
+    ctx = baggage.set_baggage("elody.library", library, ctx)
+    ctx = baggage.set_baggage("other", "left out", ctx)
+    token = context.attach(ctx)
+    try:
+        return run()
+    finally:
+        context.detach(token)
+
+
+def test_a_span_in_the_request_names_the_user_and_library():
+    provider, exporter = provider_with_baggage()
+    in_request_of(
+        "p-1",
+        "brugge.be",
+        lambda: provider.get_tracer("t").start_span("GET /entities").end(),
+    )
+    (span,) = exporter.get_finished_spans()
+    assert span.attributes["elody.user"] == "p-1"
+    assert span.attributes["elody.library"] == "brugge.be"
+    assert "other" not in span.attributes
+
+
+def test_a_span_outside_a_request_names_nobody():
+    provider, exporter = provider_with_baggage()
+    provider.get_tracer("t").start_span("cron").end()
+    (span,) = exporter.get_finished_spans()
+    assert "elody.user" not in span.attributes
+
+
+def test_the_consumer_of_a_message_knows_for_whom_it_works():
+    provider, exporter = provider_with_baggage()
+    rabbit = traced_rabbit(FakeAmqpstormRabbit(), provider)
+
+    @rabbit.queue("dams.entity_changed")
+    def index(routing_key, body, message_id):
+        pass
+
+    in_request_of(
+        "p-1",
+        "brugge.be",
+        lambda: rabbit.send({"id": "x"}, routing_key="dams.entity_changed"),
+    )
+    rabbit.deliver({"id": "x"})
+    consumer = next(
+        s for s in exporter.get_finished_spans() if s.kind == SpanKind.CONSUMER
+    )
+    assert consumer.attributes["elody.user"] == "p-1"
+    assert consumer.attributes["elody.library"] == "brugge.be"
