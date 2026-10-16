@@ -14,7 +14,7 @@ from inuits_policy_based_auth import PolicyFactory
 from inuits_policy_based_auth.exceptions import NoUserContextException
 from rabbit import get_rabbit, init_rabbit
 from storage.storagemanager import StorageManager
-from observability import init_observability
+from elody.observability import init_observability
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = (
