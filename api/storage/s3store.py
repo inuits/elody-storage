@@ -98,7 +98,7 @@ class S3StorageManager:
         try:
             file.seek(0, os.SEEK_END)
             filesize_bytes = file.tell()
-            return self.__convert_filesize(filesize_bytes)
+            return filesize_bytes
 
         except (io.UnsupportedOperation, AttributeError):
             return None
@@ -111,7 +111,7 @@ class S3StorageManager:
                 Bucket=bucket, Key=key
             )
             if filesize_bytes := file_headers.get("ContentLength"):
-                return self.__convert_filesize(filesize_bytes)
+                return filesize_bytes
             return None
         except:
             return None
