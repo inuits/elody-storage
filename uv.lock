@@ -401,6 +401,7 @@ dependencies = [
     { name = "requests" },
     { name = "retry" },
     { name = "s3transfer" },
+    { name = "sentry-sdk", extra = ["flask"] },
     { name = "six" },
     { name = "urllib3" },
     { name = "werkzeug" },
@@ -474,6 +475,7 @@ requires-dist = [
     { name = "requests", specifier = "==2.34.2" },
     { name = "retry", specifier = "==0.9.2" },
     { name = "s3transfer", specifier = "==0.10.3" },
+    { name = "sentry-sdk", extras = ["flask"], specifier = "==2.16.0" },
     { name = "six", specifier = "==1.16.0" },
     { name = "urllib3", specifier = "==2.8.0" },
     { name = "werkzeug", specifier = "==3.1.9" },
@@ -1262,6 +1264,26 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a0/a8/e0a98fd7bd874914f0608ef7c90ffde17e116aefad765021de0f012690a2/s3transfer-0.10.3.tar.gz", hash = "sha256:4f50ed74ab84d474ce614475e0b8d5047ff080810aac5d01ea25231cfc944b0c", size = 144591, upload-time = "2024-10-08T19:17:16.765Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/c0/b0fba8259b61c938c9733da9346b9f93e00881a9db22aafdd72f6ae0ec05/s3transfer-0.10.3-py3-none-any.whl", hash = "sha256:263ed587a5803c6c708d3ce44dc4dfedaab4c1a32e8329bab818933d79ddcf5d", size = 82625, upload-time = "2024-10-08T19:17:14.904Z" },
+]
+
+[[package]]
+name = "sentry-sdk"
+version = "2.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/63/59640a54963747d2c4b2d149412b2024abed13bacd4e8d16ae5babb97da0/sentry_sdk-2.16.0.tar.gz", hash = "sha256:90f733b32e15dfc1999e6b7aca67a38688a567329de4d6e184154a73f96c6892", size = 290180, upload-time = "2024-10-08T12:39:14.632Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/aa/9f8dce2aec2e95d48c057ff3bcac48958cd15f67d4e9e80e74b46c324abf/sentry_sdk-2.16.0-py2.py3-none-any.whl", hash = "sha256:49139c31ebcd398f4f6396b18910610a0c1602f6e67083240c33019d1f6aa30c", size = 313785, upload-time = "2024-10-08T12:39:12.27Z" },
+]
+
+[package.optional-dependencies]
+flask = [
+    { name = "blinker" },
+    { name = "flask" },
+    { name = "markupsafe" },
 ]
 
 [[package]]

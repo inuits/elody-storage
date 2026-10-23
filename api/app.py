@@ -16,6 +16,16 @@ from rabbit import get_rabbit, init_rabbit
 from storage.storagemanager import StorageManager
 from elody.observability import init_observability
 
+if os.getenv("GLITCH_TIP_ENABLED", "False") in {"True", "true", True}:
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+
+    sentry_sdk.init(
+        dsn=os.getenv("GLITCH_TIP_DSN"),
+        integrations=[FlaskIntegration()],
+        environment=os.getenv("NOMAD_NAMESPACE"),
+    )
+
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = (
     "/spec/dams-storage-api.json"  # Our API url (can of course be a local resource)
