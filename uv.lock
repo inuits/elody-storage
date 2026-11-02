@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.13.*"
 
 [[package]]
@@ -454,7 +454,7 @@ requires-dist = [
     { name = "gunicorn", specifier = "==23.0.0" },
     { name = "humanfriendly", specifier = "==10.0" },
     { name = "idna", specifier = "==3.15" },
-    { name = "inuits-policy-based-auth", specifier = "==10.1.0" },
+    { name = "inuits-policy-based-auth", specifier = "==10.1.1" },
     { name = "itsdangerous", specifier = "==2.2.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "jmespath", specifier = "==1.0.1" },
@@ -615,7 +615,7 @@ wheels = [
 
 [[package]]
 name = "inuits-policy-based-auth"
-version = "10.1.0"
+version = "10.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
@@ -623,9 +623,9 @@ dependencies = [
     { name = "requests" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/a2/138f705d8595aeff3683c929937d95beb65aef499ed4e2fc429ee306af3f/inuits_policy_based_auth-10.1.0.tar.gz", hash = "sha256:fa16b59f7afc15c0b89b4c9b1bb7ae34e7323c3e149bc676b18e9d5afedd23ef", size = 40664, upload-time = "2026-05-04T11:20:09.415Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/42/0d1c5ed16d9c308eb335fea868e17a3c6063d807b93a8e9da2752e70d7ad/inuits_policy_based_auth-10.1.1.tar.gz", hash = "sha256:18a8f6403c28754a751696097fd47e051958cd67877029139d4abce2d64102f9", size = 40695, upload-time = "2026-08-07T11:43:05.071Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/01/a6d74f221e8d61426e3b02ac7296df9385590344f10d7a7a4fb96a711b9b/inuits_policy_based_auth-10.1.0-py3-none-any.whl", hash = "sha256:9c45a9aa3a90eb878221df925bf81c59851f429c6f1bff3d45b8aa6e598160d4", size = 52856, upload-time = "2026-05-04T11:20:07.772Z" },
+    { url = "https://files.pythonhosted.org/packages/68/49/24f86ef9ecc5220fca6aa24202c071c1aa0f7ed58d098c89775b49dbeb07/inuits_policy_based_auth-10.1.1-py3-none-any.whl", hash = "sha256:d79d8937341025a97f5214ef9b03a3272361bb346ce294511c39dc48c8181cbd", size = 52899, upload-time = "2026-08-07T11:43:03.866Z" },
 ]
 
 [[package]]
