@@ -286,6 +286,7 @@ class S3StorageManager:
             f"/iiif/3/{new_key}/full/,150/0/default.jpg"
         )
         mediafile["mimetype"] = mimetype
+        mediafile["stub"] = False
         if exif_data:
             mediafile["technical_metadata"] = exif_data
         app.logger.info(
