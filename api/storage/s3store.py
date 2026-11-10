@@ -1,3 +1,4 @@
+import codecs
 import hashlib
 import io
 import mimetypes
@@ -36,6 +37,24 @@ from storage_exceptions import (
 # Built-in table only: a fresh MimeTypes() ignores /etc/mime.types, so the
 # result does not depend on the container image.
 _MIMETYPES = mimetypes.MimeTypes()
+_ALLOWED_TEXT_CONTROL_CHARS = {"\t", "\n", "\r", "\f"}
+
+
+def _looks_like_utf8_text(sample):
+    if not sample:
+        return False
+    try:
+        # final=False: the sample is cut at a fixed size and may end in the
+        # middle of a multi-byte character
+        text = codecs.getincrementaldecoder("utf-8")().decode(sample, final=False)
+    except UnicodeDecodeError:
+        return False
+    # \f is allowed: OCR tools put it between pages. ESC is rejected on purpose,
+    # it is used by real plotter/printer formats (HP-GL/2, PCL).
+    return not any(
+        char < " " and char not in _ALLOWED_TEXT_CONTROL_CHARS for char in text
+    )
+
 
 NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in {
     "true",
@@ -177,19 +196,22 @@ class S3StorageManager:
 
     def __get_file_mimetype(self, file, key):
         file.seek(0)
-        mime = magic.Magic(mime=True).from_buffer(file.read(parse_size("8 KiB")))
+        sample = file.read(parse_size("8 KiB"))
         file.seek(0)
+        mime = magic.Magic(mime=True).from_buffer(sample)
         if mime == "application/octet-stream":
             mime = get_mimetype_from_filename(key)
         # libmagic only guesses the kind of text from keywords at the start of
-        # a line (e.g. "union", ".de"), so for text the extension decides.
-        # Never applied to non-text content or compressed extensions.
+        # a line (e.g. "union", ".de"), so for text the extension decides. This
+        # also applies when libmagic misreads clean UTF-8 text as a binary
+        # format (e.g. HP-GL for text starting with "SP"). Never applied to
+        # content with NUL/control characters, or to compressed extensions.
         ext_mime, ext_encoding = _MIMETYPES.guess_type(key.split("/")[-1], strict=False)
-        if (
-            str(mime).startswith("text/")
-            and ext_mime
-            and ext_mime.startswith("text/")
-            and ext_encoding is None
+        ext_is_text = (
+            bool(ext_mime) and ext_mime.startswith("text/") and ext_encoding is None
+        )
+        if ext_is_text and (
+            str(mime).startswith("text/") or _looks_like_utf8_text(sample)
         ):
             mime = ext_mime
         ambiguous_media_mimes = [
