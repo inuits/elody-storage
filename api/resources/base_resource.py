@@ -25,6 +25,8 @@ from storage.storagemanager import StorageManager
 from storage.streamed_storagemanager import StreamedStorageManager
 from storage_exceptions import (
     ExpiredTicketException,
+    ForbiddenMimetypeException,
+    InvalidTextEncodingException,
     MissingFilenameException,
     MissingTicketIdException,
 )
@@ -39,10 +41,20 @@ SAFE_EXCEPTIONS = (
     EmptyFileException,
     ExpiredTicketException,
     FileNotFoundException,
+    ForbiddenMimetypeException,
+    InvalidTextEncodingException,
     MissingFilenameException,
     MissingTicketIdException,
     NotFoundException,
 )
+
+SANDBOXED_CONTENT_TYPES = {
+    "application/xhtml+xml",
+    "application/xml",
+    "image/svg+xml",
+    "text/html",
+    "text/xml",
+}
 
 
 # only our own exceptions carry client-safe text; anything else may embed
@@ -170,6 +182,10 @@ class BaseResource(Resource):
         headers = Headers()
         headers["Accept-Ranges"] = "bytes"
         headers["Content-Type"] = content_type
+        headers["X-Content-Type-Options"] = "nosniff"
+        if content_type in SANDBOXED_CONTENT_TYPES:
+            # blocks scripts in user-uploaded markup, display still works
+            headers["Content-Security-Policy"] = "sandbox"
 
         range_header = request.headers.get("Range")
         if range_header:
@@ -289,7 +305,15 @@ class BaseResource(Resource):
             message = client_error_message(ex)
             if job_id:
                 fail_job(job_id, message, get_rabbit=get_rabbit)
-            return message, 409 if isinstance(ex, DuplicateFileException) else 400
+            if isinstance(ex, DuplicateFileException):
+                status_code = 409
+            elif isinstance(ex, ForbiddenMimetypeException):
+                status_code = 415
+            elif isinstance(ex, InvalidTextEncodingException):
+                status_code = 422
+            else:
+                status_code = 400
+            return message, status_code
         finally:
             if file:
                 file.close()

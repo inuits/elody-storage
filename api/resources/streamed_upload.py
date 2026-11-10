@@ -1,8 +1,16 @@
 from app import policy_factory
-from elody.exceptions import DuplicateFileException, EmptyFileException
+from elody.exceptions import (
+    DuplicateFileException,
+    EmptyFileException,
+    NotFoundException,
+)
 from flask import request
 from inuits_policy_based_auth import RequestContext
 from resources.base_resource import BaseResource, client_error_message
+from storage_exceptions import (
+    ForbiddenMimetypeException,
+    InvalidTextEncodingException,
+)
 from werkzeug.exceptions import BadRequest
 
 
@@ -67,10 +75,19 @@ class CompleteStream(BaseResource):
                 file_info=request_body["file_info"],
                 legacy_store=self.storage,
             )
+            return {}, 200
         except EmptyFileException as ex:
             return ex.message, 422
         except DuplicateFileException as ex:
-            return str(ex), 409 if isinstance(ex, DuplicateFileException) else 400
+            return str(ex), 409
+        except ForbiddenMimetypeException as ex:
+            return str(ex), 415
+        except InvalidTextEncodingException as ex:
+            return str(ex), 422
+        except NotFoundException as ex:
+            return str(ex), 404
+        except KeyError as ex:
+            return f"Missing field {ex}", 400
         except BadRequest as ex:
             return str(ex), 400
         except Exception as ex:  # noqa: BLE001

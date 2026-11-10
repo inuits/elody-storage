@@ -1,5 +1,6 @@
 import hashlib
 import io
+import mimetypes
 import os
 import re
 from datetime import datetime
@@ -26,7 +27,15 @@ from humanfriendly import parse_size
 from PIL import ExifTags, Image, TiffImagePlugin
 from pymediainfo import MediaInfo
 from rabbit import get_rabbit
-from storage_exceptions import ForbiddenMimetypeException, MissingBucketnameException
+from storage_exceptions import (
+    ForbiddenMimetypeException,
+    InvalidTextEncodingException,
+    MissingBucketnameException,
+)
+
+# Built-in table only: a fresh MimeTypes() ignores /etc/mime.types, so the
+# result does not depend on the container image.
+_MIMETYPES = mimetypes.MimeTypes()
 
 NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in {
     "true",
@@ -131,9 +140,18 @@ class S3StorageManager:
             file.seek(0)
             raw_data = file.read()
             file.seek(0)
-            file_content = (
-                raw_data.decode("utf-8") if isinstance(raw_data, bytes) else raw_data
-            )
+            try:
+                file_content = (
+                    raw_data.decode("utf-8")
+                    if isinstance(raw_data, bytes)
+                    else raw_data
+                )
+            except UnicodeDecodeError as ex:
+                # no filename in the message: it is user-controlled and may be
+                # rendered as HTML by clients
+                raise InvalidTextEncodingException(
+                    "File is not valid UTF-8 text"
+                ) from ex
         return file_content
 
     def __refine_media_mimetype(self, file, current_mime):
@@ -163,6 +181,17 @@ class S3StorageManager:
         file.seek(0)
         if mime == "application/octet-stream":
             mime = get_mimetype_from_filename(key)
+        # libmagic only guesses the kind of text from keywords at the start of
+        # a line (e.g. "union", ".de"), so for text the extension decides.
+        # Never applied to non-text content or compressed extensions.
+        ext_mime, ext_encoding = _MIMETYPES.guess_type(key.split("/")[-1], strict=False)
+        if (
+            str(mime).startswith("text/")
+            and ext_mime
+            and ext_mime.startswith("text/")
+            and ext_encoding is None
+        ):
+            mime = ext_mime
         ambiguous_media_mimes = [
             "video/quicktime",
             "video/mp4",

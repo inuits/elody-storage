@@ -1,6 +1,7 @@
 from .exceptions import (
     ExpiredTicketException,
     ForbiddenMimetypeException,
+    InvalidTextEncodingException,
     MissingBucketnameException,
     MissingFilenameException,
     MissingTicketIdException,
@@ -9,6 +10,7 @@ from .exceptions import (
 __all__ = [
     "ExpiredTicketException",
     "ForbiddenMimetypeException",
+    "InvalidTextEncodingException",
     "MissingBucketnameException",
     "MissingFilenameException",
     "MissingTicketIdException",

@@ -16,3 +16,7 @@ class ForbiddenMimetypeException(Exception):
 
 class MissingBucketnameException(Exception):
     pass
+
+
+class InvalidTextEncodingException(Exception):
+    pass

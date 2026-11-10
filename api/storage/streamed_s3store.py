@@ -6,8 +6,12 @@ from typing import TYPE_CHECKING
 from boto3 import client, resource
 from botocore.config import Config
 from elody.error_codes import ErrorCode, get_error_code, get_write
-from elody.exceptions import DuplicateFileException
-from storage_exceptions import MissingBucketnameException
+from elody.exceptions import DuplicateFileException, EmptyFileException
+from storage_exceptions import (
+    ForbiddenMimetypeException,
+    InvalidTextEncodingException,
+    MissingBucketnameException,
+)
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
@@ -113,17 +117,29 @@ class StreamedS3Store:
             header_data = file_stream.read(1 * (1024**3))
             with closing(BytesIO(header_data)) as file_part:
                 file_part.name = file_info["name"]
-                legacy_store.upload_file(
-                    file=file_part,
-                    mediafile_id=key,
-                    key=filename,
-                    ticket=None,
-                    parent_job_id=None,
-                    md5sum=file_info["md5sum"],
-                    skip_s3_upload=True,
-                    bucket_name=bucket_name,
-                    is_duplicate=is_duplicate,
-                )
+                try:
+                    legacy_store.upload_file(
+                        file=file_part,
+                        mediafile_id=key,
+                        key=filename,
+                        ticket=None,
+                        parent_job_id=None,
+                        md5sum=file_info["md5sum"],
+                        skip_s3_upload=True,
+                        bucket_name=bucket_name,
+                        is_duplicate=is_duplicate,
+                    )
+                except (
+                    EmptyFileException,
+                    ForbiddenMimetypeException,
+                    InvalidTextEncodingException,
+                ):
+                    # These are raised before the mediafile is updated, so the
+                    # object we just copied is orphaned. Never delete it when it
+                    # is a duplicate: filename then points to the existing file.
+                    if not is_duplicate:
+                        self.client.delete_object(Bucket=bucket_name, Key=filename)
+                    raise
 
     def abort_stream(self, *, stream_id: str, key: str):
         try:
