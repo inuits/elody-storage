@@ -55,8 +55,8 @@ class UploadTranscode(BaseResource):
         try:
             ticket_id = request.args.get("ticket_id")
             parent_job_id = request.args.get("parent_job_id")
-            ignore_duplicate_check = bool(
-                request.args.get("ignore_duplicate_check", False)
+            ignore_duplicate_check = (
+                request.args.get("ignore_duplicate_check", "false").lower() == "true"
             )
             user = self.get_user_from_request_and_ticket(request)
             if ticket_id:
@@ -85,8 +85,8 @@ class UploadThumbnail(BaseResource):
         try:
             ticket_id = request.args.get("ticket_id")
             parent_job_id = request.args.get("parent_job_id")
-            ignore_duplicate_check = bool(
-                request.args.get("ignore_duplicate_check", False)
+            ignore_duplicate_check = (
+                request.args.get("ignore_duplicate_check", "false").lower() == "true"
             )
             user = self.get_user_from_request_and_ticket(request)
             if ticket_id:

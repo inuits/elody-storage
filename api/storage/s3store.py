@@ -657,6 +657,21 @@ class S3StorageManager:
                 parent_job_id,
             )
 
+    def __get_existing_derivative_filename(
+        self, md5sum, mediafile_id, technical_origin
+    ):
+        existing = self._get_mediafile(md5sum, fatal=False)
+        if not existing:
+            return None
+        if existing.get("technical_origin") != technical_origin:
+            return None
+        if not any(
+            relation.get("key") == mediafile_id
+            for relation in existing.get("relations") or []
+        ):
+            return None
+        return existing.get("filename")
+
     def upload_transcode(
         self,
         file,
@@ -700,15 +715,31 @@ class S3StorageManager:
         data["filesize"] = self.__get_filesize_s3(key, bucket) or self.__get_filesize(
             file
         )
+        display_filename = key
         try:
             self.session.post(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
                 json=data,
             ).raise_for_status()
+        except requests.HTTPError as ex:
+            existing_filename = None
+            if ex.response is not None and ex.response.status_code == 409:
+                existing_filename = self.__get_existing_derivative_filename(
+                    md5sum, mediafile_id, "transcode"
+                )
+            if not existing_filename:
+                raise Exception(str(ex)) from ex  # noqa: TRY002
+            display_filename = existing_filename
+            app.logger.info(
+                f"Transcode {md5sum} already exists for mediafile {mediafile_id}, only updating display_filename"
+            )
+        except Exception as ex:
+            raise Exception(str(ex)) from ex  # noqa: TRY002
+        try:
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 json={
-                    "display_filename": key,
+                    "display_filename": display_filename,
                     "schema": {"type": "elody"},
                     "type": "mediafile",
                 },
@@ -759,16 +790,32 @@ class S3StorageManager:
         data["filesize"] = self.__get_filesize_s3(key, bucket) or self.__get_filesize(
             file
         )
+        thumbnail_key = key
         try:
             self.session.post(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
                 json=data,
             ).raise_for_status()
+        except requests.HTTPError as ex:
+            existing_filename = None
+            if ex.response is not None and ex.response.status_code == 409:
+                existing_filename = self.__get_existing_derivative_filename(
+                    md5sum, mediafile_id, "thumbnail"
+                )
+            if not existing_filename:
+                raise Exception(str(ex)) from ex  # noqa: TRY002
+            thumbnail_key = existing_filename
+            app.logger.info(
+                f"Thumbnail {md5sum} already exists for mediafile {mediafile_id}, only updating thumbnail_filename"
+            )
+        except Exception as ex:
+            raise Exception(str(ex)) from ex  # noqa: TRY002
+        try:
             self.session.patch(
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 json={
-                    "thumbnail_filename": key,
-                    "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+                    "thumbnail_filename": thumbnail_key,
+                    "thumbnail_file_location": f"/iiif/3/{thumbnail_key.split('/')[-1]}/full/,150/0/default.jpg",
                     "schema": {"type": "elody"},
                     "type": "mediafile",
                 },
