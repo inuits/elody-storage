@@ -24,6 +24,7 @@ from rabbit import get_rabbit
 from storage.storagemanager import StorageManager
 from storage.streamed_storagemanager import StreamedStorageManager
 from storage_exceptions import (
+    DerivativeConflictException,
     ExpiredTicketException,
     ForbiddenMimetypeException,
     InvalidTextEncodingException,
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 SAFE_EXCEPTIONS = (
     BadRequest,
+    DerivativeConflictException,
     DuplicateFileException,
     EmptyFileException,
     ExpiredTicketException,
@@ -305,7 +307,7 @@ class BaseResource(Resource):
             message = client_error_message(ex)
             if job_id:
                 fail_job(job_id, message, get_rabbit=get_rabbit)
-            if isinstance(ex, DuplicateFileException):
+            if isinstance(ex, (DuplicateFileException, DerivativeConflictException)):
                 status_code = 409
             elif isinstance(ex, ForbiddenMimetypeException):
                 status_code = 415

@@ -29,6 +29,7 @@ from PIL import ExifTags, Image, TiffImagePlugin
 from pymediainfo import MediaInfo
 from rabbit import get_rabbit
 from storage_exceptions import (
+    DerivativeConflictException,
     ForbiddenMimetypeException,
     InvalidTextEncodingException,
     MissingBucketnameException,
@@ -657,19 +658,36 @@ class S3StorageManager:
                 parent_job_id,
             )
 
-    def __get_existing_derivative_filename(
-        self, md5sum, mediafile_id, technical_origin
-    ):
+    def __resolve_existing_derivative(self, md5sum, mediafile_id, technical_origin):
         existing = self._get_mediafile(md5sum, fatal=False)
         if not existing:
-            return None
+            raise DerivativeConflictException(
+                f"Could not find the existing document for identifier {md5sum}"
+            )
         if existing.get("technical_origin") != technical_origin:
-            return None
+            raise DerivativeConflictException(
+                f"Identifier {md5sum} is already used by a document that is not a {technical_origin} derivative"
+            )
+        relation_type = os.getenv(
+            "DERIVATIVE_RELATION_TYPE_TEMPLATE", "isTECHNICAL_ORIGINFor"
+        ).replace("TECHNICAL_ORIGIN", technical_origin.title())
         if not any(
             relation.get("key") == mediafile_id
+            and relation.get("type") == relation_type
             for relation in existing.get("relations") or []
         ):
-            return None
+            response = self.session.post(
+                f"{self.collection_api_url}/mediafiles/{md5sum}/relations",
+                json=[{"key": mediafile_id, "type": relation_type}],
+            )
+            if not response.ok:
+                app.logger.error(
+                    f"Adding {relation_type} relation to {mediafile_id} on existing {technical_origin} {md5sum} failed with {response.status_code}: {response.text[:500]}"
+                )
+                response.raise_for_status()
+            app.logger.info(
+                f"Added {relation_type} relation to {mediafile_id} on existing {technical_origin} {md5sum}"
+            )
         return existing.get("filename")
 
     def upload_transcode(
@@ -722,14 +740,14 @@ class S3StorageManager:
                 json=data,
             ).raise_for_status()
         except requests.HTTPError as ex:
-            existing_filename = None
-            if ex.response is not None and ex.response.status_code == 409:
-                existing_filename = self.__get_existing_derivative_filename(
-                    md5sum, mediafile_id, "transcode"
-                )
-            if not existing_filename:
+            if ex.response is None or ex.response.status_code != 409:
                 raise Exception(str(ex)) from ex  # noqa: TRY002
-            display_filename = existing_filename
+            app.logger.warning(
+                f"Creating transcode {md5sum} for mediafile {mediafile_id} returned 409: {ex.response.text[:500]}"
+            )
+            display_filename = self.__resolve_existing_derivative(
+                md5sum, mediafile_id, "transcode"
+            )
             app.logger.info(
                 f"Transcode {md5sum} already exists for mediafile {mediafile_id}, only updating display_filename"
             )
@@ -797,14 +815,14 @@ class S3StorageManager:
                 json=data,
             ).raise_for_status()
         except requests.HTTPError as ex:
-            existing_filename = None
-            if ex.response is not None and ex.response.status_code == 409:
-                existing_filename = self.__get_existing_derivative_filename(
-                    md5sum, mediafile_id, "thumbnail"
-                )
-            if not existing_filename:
+            if ex.response is None or ex.response.status_code != 409:
                 raise Exception(str(ex)) from ex  # noqa: TRY002
-            thumbnail_key = existing_filename
+            app.logger.warning(
+                f"Creating thumbnail {md5sum} for mediafile {mediafile_id} returned 409: {ex.response.text[:500]}"
+            )
+            thumbnail_key = self.__resolve_existing_derivative(
+                md5sum, mediafile_id, "thumbnail"
+            )
             app.logger.info(
                 f"Thumbnail {md5sum} already exists for mediafile {mediafile_id}, only updating thumbnail_filename"
             )

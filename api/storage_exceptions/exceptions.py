@@ -20,3 +20,7 @@ class MissingBucketnameException(Exception):
 
 class InvalidTextEncodingException(Exception):
     pass
+
+
+class DerivativeConflictException(Exception):
+    pass

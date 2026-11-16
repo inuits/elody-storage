@@ -1,4 +1,5 @@
 from .exceptions import (
+    DerivativeConflictException,
     ExpiredTicketException,
     ForbiddenMimetypeException,
     InvalidTextEncodingException,
@@ -8,6 +9,7 @@ from .exceptions import (
 )
 
 __all__ = [
+    "DerivativeConflictException",
     "ExpiredTicketException",
     "ForbiddenMimetypeException",
     "InvalidTextEncodingException",
