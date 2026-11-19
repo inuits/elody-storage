@@ -24,6 +24,11 @@ FROM base-stage AS development-stage
 ENV APP_ENV=dev
 
 COPY docker/pip.conf /etc
+COPY elody-python-sdk/ ./elody-python-sdk
+
+USER root
+RUN chown -R app:app elody-python-sdk
+USER app
 
 RUN pip install --no-cache-dir -r requirements.txt -r requirements_dev.txt
 
