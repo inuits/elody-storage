@@ -85,15 +85,16 @@ class BaseResource(Resource):
 
     def __get_auth_headers(self):
         try:
-            tenant = get_user_context().x_tenant.id
+            user_context = get_user_context()
+            tenant = user_context.auth_objects.get("api_key") or user_context.x_tenant.id
         except NoUserContextException:
-            tenant = request.headers.get("apikey", os.getenv("STATIC_APIKEY"))
+            tenant = request.headers.get("X-API-Key", os.getenv("STATIC_APIKEY"))
         # secrets often arrive with a trailing newline, which requests rejects
         jwt = os.getenv("STATIC_JWT", "").strip()
         if tenant:
             return {
                 "Authorization": f"Bearer {jwt}",
-                "apikey": str(tenant).strip(),
+                "X-API-Key": str(tenant).strip(),
             }
         return {"Authorization": f"Bearer {jwt}"}
 

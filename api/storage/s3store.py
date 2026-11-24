@@ -92,7 +92,7 @@ class S3StorageManager:
     def set_headers(self, headers):
         self.headers = headers
         self.session.headers.pop("Authorization", None)
-        self.session.headers.pop("apikey", None)
+        self.session.headers.pop("X-API-Key", None)
         self.session.headers.update(headers)
 
     def __calculate_md5(self, file):
@@ -236,6 +236,9 @@ class S3StorageManager:
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
+    def __get_scope(self, key, ticket=None):
+        return (ticket["location"] if ticket else key).rpartition("/")[0]
+
     def __handle_duplicate_file(self, mediafile, mimetype, md5sum, filename, message):
         try:
             found_mediafile = self._get_mediafile(md5sum)
@@ -324,8 +327,10 @@ class S3StorageManager:
         *,
         file_content=None,
     ):
+        scope = self.__get_scope(new_key)
         new_key = new_key.split("/")[-1]
-        mediafile["identifiers"].append(md5sum)
+        if not scope:
+            mediafile["identifiers"].append(md5sum)
         mediafile["md5sum"] = md5sum
         mediafile["original_filename"] = mediafile["filename"]
         if not mediafile.get(
@@ -409,10 +414,17 @@ class S3StorageManager:
         if self.duplicate_file_check in ["True", True, "true"]:
             bucket_name = bucket_name or self.__get_bucket_name(ticket)
             client = self.s3.Bucket(bucket_name).meta.client
-            objects = client.list_objects_v2(Bucket=bucket_name, Prefix=md5sum)
+            scope = self.__get_scope(filename, ticket)
+            prefix = f"{scope}/{md5sum}" if scope else md5sum
+            objects = client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
             if len(objects.get("Contents", [])):
                 existing_file = objects.get("Contents", [])[0]["Key"]
                 error_message = f" | existing_file:{existing_file} - Duplicate file {filename} matches existing file {existing_file}."
+                existing_metadata = client.head_object(
+                    Bucket=bucket_name, Key=existing_file
+                ).get("Metadata", {})
+                if mediafile_id := existing_metadata.get("mediafile-id"):
+                    error_message += f" existing_mediafile:{mediafile_id}"
                 raise DuplicateFileException(
                     f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_write())} {error_message}",
                     existing_file,
@@ -625,6 +637,12 @@ class S3StorageManager:
             else:
                 self.check_file_exists(key, md5sum, ticket)
         except DuplicateFileException as ex:
+            if mediafile and self.__get_scope(key, ticket):
+                if not mediafile.get("md5sum"):
+                    self.session.delete(
+                        f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}"
+                    )
+                raise
             if mediafile:
                 self.__handle_duplicate_file(
                     mediafile, mimetype, ex.md5sum, ex.filename, ex.message
@@ -632,7 +650,9 @@ class S3StorageManager:
         if not skip_s3_upload:
             key = self.__get_key(key, md5sum=md5sum, ticket=ticket)
             self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
-                Fileobj=file, Key=key
+                Fileobj=file,
+                Key=key,
+                ExtraArgs={"Metadata": {"mediafile-id": mediafile_id}},
             )
         if mediafile:
             bucket = bucket_name or ticket.get("bucket")
