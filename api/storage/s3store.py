@@ -16,7 +16,13 @@ from cloudevents.v1.conversion import to_dict
 from cloudevents.v1.http import CloudEvent
 from constants_storage import TechnicalOrigins
 from dateutil import parser
-from elody.error_codes import ErrorCode, get_alert, get_error_code, get_write
+from elody.error_codes import (
+    ErrorCode,
+    get_alert,
+    get_error_code,
+    get_read,
+    get_write,
+)
 from elody.exceptions import (
     DuplicateFileException,
     EmptyFileException,
@@ -251,11 +257,21 @@ class S3StorageManager:
                 f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_alert())} {message.removeprefix(get_error_code(ErrorCode.DUPLICATE_FILE, get_write())).strip()}"
             ) from nerr
         mediafile_id = self.__get_raw_id(mediafile)
+        is_merged = False
         if self.__get_raw_id(found_mediafile) != mediafile_id:
-            self.session.delete(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
-            app.logger.info(
-                f"{message} Existing mediafile for file found, deleting new one."
-            )
+            if NEW_STORAGE_ENABLED:
+                is_merged = self.__merge_duplicate(found_mediafile, mediafile_id)
+            if is_merged:
+                app.logger.info(
+                    f"{message} Existing mediafile for file found, merged new one into it."
+                )
+            else:
+                self.session.delete(
+                    f"{self.collection_api_url}/mediafiles/{mediafile_id}"
+                )
+                app.logger.info(
+                    f"{message} Existing mediafile for file found, deleting new one."
+                )
         if self.is_metadata_updated(found_mediafile, mediafile):
             # NOTE: So this currently means the last seen filename is used.
             app.logger.info(f"{message} Metadata not up-to-date, updating.")
@@ -268,8 +284,9 @@ class S3StorageManager:
                 f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
             )
         if (
-            self.are_relations_updated(found_mediafile, mediafile)
-            and NEW_STORAGE_ENABLED
+            NEW_STORAGE_ENABLED
+            and not is_merged
+            and self.are_relations_updated(found_mediafile, mediafile)
         ):
             app.logger.info(f"{message} Relations not up-to-date, updating.")
             relations_payload = self.get_relations_payload(found_mediafile, mediafile)
@@ -280,6 +297,35 @@ class S3StorageManager:
         raise DuplicateFileException(
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_alert())} {message.removeprefix(get_error_code(ErrorCode.DUPLICATE_FILE, get_write())).strip()}"
         )
+
+    def __merge_duplicate(self, found_mediafile, duplicate_id):
+        """Let the collection-api merge the duplicate into the existing mediafile.
+
+        The collection-api knows how the client links mediafiles to entities, so
+        it re-links everything that references the duplicate and deletes it.
+        Returns False when the collection-api does not have the endpoint yet, so
+        the caller can fall back to the legacy flow.
+        """
+        found_mediafile_id = self.__get_raw_id(found_mediafile)
+        response = self.session.post(
+            f"{self.collection_api_url}/mediafiles/{found_mediafile_id}/duplicates",
+            json={"duplicate_id": duplicate_id},
+        )
+        if response.status_code == 405 or (
+            response.status_code == 404
+            and get_error_code(ErrorCode.ITEM_NOT_FOUND, get_read())
+            not in response.text
+        ):
+            app.logger.warning(
+                f"Collection-api has no duplicates endpoint, falling back to legacy duplicate handling for mediafile {duplicate_id}."
+            )
+            return False
+        if not response.ok:
+            app.logger.error(
+                f"Merging duplicate {duplicate_id} into mediafile {found_mediafile_id} failed with {response.status_code}: {response.text[:500]}"
+            )
+            response.raise_for_status()
+        return True
 
     def __validate_mimetype_access_control(self, mimetype):
         has_access_control = False
@@ -487,6 +533,7 @@ class S3StorageManager:
         ]
         return bool(set(new_metadata) - set(old_metadata))
 
+    # TODO: remove once all clients run a collection-api with /mediafiles/<id>/duplicates  # noqa: FIX002
     def are_relations_updated(self, old_mediafile, new_mediafile):
         old_relations = [
             f"{relation['key']}:{relation['type']}"
@@ -498,6 +545,7 @@ class S3StorageManager:
         ]
         return bool(set(new_relations) - set(old_relations))
 
+    # TODO: remove once all clients run a collection-api with /mediafiles/<id>/duplicates  # noqa: FIX002
     def get_relations_payload(self, old_mediafile, new_mediafile):
         old_relations = old_mediafile.get("relations", [])
         new_relations = new_mediafile.get("relations", [])
