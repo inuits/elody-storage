@@ -3,8 +3,10 @@ import hashlib
 import io
 import mimetypes
 import os
+import random
 import re
 from datetime import datetime
+from time import sleep
 from urllib.parse import urlparse
 
 import app
@@ -69,6 +71,19 @@ NEW_STORAGE_ENABLED = os.getenv("NEW_STORAGE_ENABLED", "False") in {
     True,
 }
 ROUTING_KEY_PREFIX = os.getenv("ROUTING_KEY_PREFIX", "dams")
+
+CONFLICT_RETRY_ATTEMPTS = 4
+CONFLICT_RETRY_DELAYS = (0.25, 0.5, 1.0)
+CONFLICT_RETRY_JITTER = 0.1
+OPTIMISTIC_CONCURRENCY_MESSAGE = "Optimistic concurrency failure"
+
+
+def _parse_etag(value):
+    # collection-api compares If-Match with the raw document version, so the
+    # quotes and weak prefix that Flask adds to an ETag header must be removed
+    if not value:
+        return None
+    return value.strip().removeprefix("W/").strip('"') or None
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -280,9 +295,15 @@ class S3StorageManager:
                 "schema": {"type": "elody"},
                 "type": "mediafile",
             }
-            self.session.patch(
-                f"{self.collection_api_url}/mediafiles/{md5sum}", json=payload
+            response = self.__send_with_conflict_retry(
+                "PATCH",
+                f"{self.collection_api_url}/mediafiles/{md5sum}",
+                json=payload,
             )
+            if not response.ok:
+                app.logger.error(
+                    f"Updating metadata of existing mediafile {md5sum} failed with {response.status_code}: {response.text[:500]}"
+                )
         if (
             NEW_STORAGE_ENABLED
             and not is_merged
@@ -290,10 +311,15 @@ class S3StorageManager:
         ):
             app.logger.info(f"{message} Relations not up-to-date, updating.")
             relations_payload = self.get_relations_payload(found_mediafile, mediafile)
-            self.session.put(
+            response = self.__send_with_conflict_retry(
+                "PUT",
                 f"{self.collection_api_url}/mediafiles/{md5sum}/relations",
                 json=relations_payload,
             )
+            if not response.ok:
+                app.logger.error(
+                    f"Updating relations of existing mediafile {md5sum} failed with {response.status_code}: {response.text[:500]}"
+                )
         raise DuplicateFileException(
             f"{get_error_code(ErrorCode.DUPLICATE_FILE, get_alert())} {message.removeprefix(get_error_code(ErrorCode.DUPLICATE_FILE, get_write())).strip()}"
         )
@@ -307,7 +333,8 @@ class S3StorageManager:
         the caller can fall back to the legacy flow.
         """
         found_mediafile_id = self.__get_raw_id(found_mediafile)
-        response = self.session.post(
+        response = self.__send_with_conflict_retry(
+            "POST",
             f"{self.collection_api_url}/mediafiles/{found_mediafile_id}/duplicates",
             json={"duplicate_id": duplicate_id},
         )
@@ -337,6 +364,35 @@ class S3StorageManager:
             raise ForbiddenMimetypeException(
                 f"File mimetype {mimetype} is not allowed."
             )
+
+    def __send_with_conflict_retry(self, method, url, **kwargs):
+        """Send a request to the collection-api, retrying on optimistic concurrency conflicts.
+
+        Only a 409 whose body reports an optimistic concurrency failure is retried;
+        other 409s (duplicate derivative, uniqueness) are semantic and returned
+        as-is. Returns the last response without raising, so every caller keeps
+        its own error handling.
+        """
+        response = None
+        for attempt in range(1, CONFLICT_RETRY_ATTEMPTS + 1):
+            response = self.session.request(method, url, **kwargs)
+            if (
+                response.status_code != 409
+                or OPTIMISTIC_CONCURRENCY_MESSAGE not in response.text
+                or attempt == CONFLICT_RETRY_ATTEMPTS
+            ):
+                return response
+            app.logger.warning(
+                f"Concurrency conflict on {method} {url}, retrying (attempt {attempt}/{CONFLICT_RETRY_ATTEMPTS})"
+            )
+            self.__wait_before_conflict_retry(attempt)
+        return response
+
+    def __wait_before_conflict_retry(self, attempt):
+        sleep(
+            CONFLICT_RETRY_DELAYS[attempt - 1]
+            + random.uniform(0, CONFLICT_RETRY_JITTER)
+        )
 
     def __signal_file_uploaded(
         self,
@@ -375,30 +431,63 @@ class S3StorageManager:
     ):
         scope = self.__get_scope(new_key)
         new_key = new_key.split("/")[-1]
-        if not scope:
-            mediafile["identifiers"].append(md5sum)
-        mediafile["md5sum"] = md5sum
-        mediafile["original_filename"] = mediafile["filename"]
-        if not mediafile.get(
-            "technical_origin",
-        ):  # It will otherwise overwrite the original if already present
-            mediafile["technical_origin"] = "original"
-        mediafile["filename"] = new_key
-        mediafile["original_file_location"] = f"/download/{new_key}"
-        mediafile["thumbnail_file_location"] = (
-            f"/iiif/3/{new_key}/full/,150/0/default.jpg"
-        )
-        mediafile["mimetype"] = mimetype
-        mediafile["stub"] = False
+        mediafile_id = self.__get_raw_id(mediafile)
+        version = mediafile.pop("_etag", None)
+        changes = {
+            "md5sum": md5sum,
+            "original_filename": mediafile["filename"],
+            "filename": new_key,
+            "original_file_location": f"/download/{new_key}",
+            "thumbnail_file_location": f"/iiif/3/{new_key}/full/,150/0/default.jpg",
+            "mimetype": mimetype,
+            "stub": False,
+        }
+        # set on the mediafile by upload_file before this method is called
+        for field in ("file_creation_date", "filesize"):
+            if field in mediafile:
+                changes[field] = mediafile[field]
         if exif_data:
-            mediafile["technical_metadata"] = exif_data
-        app.logger.info(
-            f"Trying to update mediafile information with url: {self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}"
-        )
-        resp = self.session.put(
-            f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
-            json=mediafile,
-        )
+            changes["technical_metadata"] = exif_data
+
+        def apply_changes(document):
+            if not scope and md5sum not in document["identifiers"]:
+                document["identifiers"].append(md5sum)
+            document.update(changes)
+            if not document.get(
+                "technical_origin",
+            ):  # It will otherwise overwrite the original if already present
+                document["technical_origin"] = "original"
+            return document
+
+        url = f"{self.collection_api_url}/mediafiles/{mediafile_id}"
+        app.logger.info(f"Trying to update mediafile information with url: {url}")
+        if not version:
+            app.logger.warning(
+                f"No document version known for mediafile {mediafile_id}, updating without If-Match"
+            )
+        # The full PUT replaces the whole document. If-Match makes collection-api
+        # reject it when the mediafile changed since we read it, instead of
+        # silently overwriting those changes. On a conflict, re-read the
+        # mediafile and apply our changes on top of the fresh version.
+        document = mediafile
+        for attempt in range(1, CONFLICT_RETRY_ATTEMPTS + 1):
+            resp = self.session.put(
+                url,
+                json=apply_changes(document),
+                headers={"If-Match": version} if version else {},
+            )
+            is_conflict = resp.status_code == 412 or (
+                resp.status_code == 409
+                and OPTIMISTIC_CONCURRENCY_MESSAGE in resp.text
+            )
+            if not is_conflict or attempt == CONFLICT_RETRY_ATTEMPTS:
+                break
+            app.logger.warning(
+                f"Concurrency conflict on PUT {url}, re-reading mediafile and retrying (attempt {attempt}/{CONFLICT_RETRY_ATTEMPTS})"
+            )
+            self.__wait_before_conflict_retry(attempt)
+            document = self._get_mediafile(mediafile_id, include_etag=True)
+            version = document.pop("_etag", None)
         resp.raise_for_status()
         if (
             file_content
@@ -411,7 +500,8 @@ class S3StorageManager:
                 ]
             )
         ):
-            self.session.patch(
+            response = self.__send_with_conflict_retry(
+                "PATCH",
                 f"{self.collection_api_url}/mediafiles/{parent_mediafile_ids[0]}",
                 json={
                     "metadata": [{"key": "text_from_ocr", "value": file_content}],
@@ -419,11 +509,27 @@ class S3StorageManager:
                     "type": "mediafile",
                 },
             )
+            if not response.ok:
+                app.logger.error(
+                    f"Storing text_from_ocr on mediafile {parent_mediafile_ids[0]} failed with {response.status_code}: {response.text[:500]}"
+                )
 
-    def _get_mediafile(self, mediafile_id, fatal=True):
+    def _get_mediafile(self, mediafile_id, fatal=True, *, include_etag=False):
         req = self.session.get(f"{self.collection_api_url}/mediafiles/{mediafile_id}")
         if req.status_code == 200:
-            return req.json()
+            mediafile = req.json()
+            if include_etag:
+                # opt-in: the version is stored under "_etag" and must be popped
+                # again before the document is sent anywhere
+                version = mediafile.get("document_version")
+                version = (
+                    _parse_etag(req.headers.get("ETag"))
+                    if version in (None, "")
+                    else str(version)
+                )
+                if version:
+                    mediafile["_etag"] = version
+            return mediafile
         elif not fatal:
             return None
         elif req.status_code == 404:
@@ -451,10 +557,15 @@ class S3StorageManager:
         self.s3.Bucket(self.__get_bucket_name()).upload_fileobj(
             Fileobj=buf, Key=self.__get_key(mediafile["filename"])
         )
-        self.session.patch(
+        response = self.__send_with_conflict_retry(
+            "PATCH",
             f"{self.collection_api_url}/mediafiles/{mediafile['identifiers'][0]}",
             json={"exif": str(exif), "schema": {"type": "elody"}, "type": "mediafile"},
         )
+        if not response.ok:
+            app.logger.error(
+                f"Storing exif on mediafile {mediafile['identifiers'][0]} failed with {response.status_code}: {response.text[:500]}"
+            )
 
     def check_file_exists(self, filename, md5sum, ticket=None, bucket_name=None):
         if self.duplicate_file_check in ["True", True, "true"]:
@@ -660,7 +771,7 @@ class S3StorageManager:
         bucket_name=None,
         is_duplicate=False,
     ):
-        mediafile = self._get_mediafile(mediafile_id)
+        mediafile = self._get_mediafile(mediafile_id, include_etag=True)
 
         md5sum = md5sum or self.__calculate_md5(file)
         mimetype = self.__get_file_mimetype(file, key)
@@ -744,7 +855,8 @@ class S3StorageManager:
             and relation.get("type") == relation_type
             for relation in existing.get("relations") or []
         ):
-            response = self.session.post(
+            response = self.__send_with_conflict_retry(
+                "POST",
                 f"{self.collection_api_url}/mediafiles/{md5sum}/relations",
                 json=[{"key": mediafile_id, "type": relation_type}],
             )
@@ -781,8 +893,15 @@ class S3StorageManager:
             self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
                 Fileobj=file, Key=key
             )
-        except DuplicateFileException:
-            if not ignore_duplicate_check or not NEW_STORAGE_ENABLED:
+        except DuplicateFileException as ex:
+            # The key contains the md5 and the technical origin, so the file in
+            # S3 is our own derivative from an earlier, partially failed attempt.
+            # Continue so the derivative document and display_filename get
+            # completed instead of failing on every retry.
+            is_own_derivative = ex.filename == key
+            if not is_own_derivative and (
+                not ignore_duplicate_check or not NEW_STORAGE_ENABLED
+            ):
                 raise
 
         new_key = key.split("/")[-1]
@@ -803,7 +922,8 @@ class S3StorageManager:
         )
         display_filename = key
         try:
-            self.session.post(
+            self.__send_with_conflict_retry(
+                "POST",
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
                 json=data,
             ).raise_for_status()
@@ -822,7 +942,8 @@ class S3StorageManager:
         except Exception as ex:
             raise Exception(str(ex)) from ex  # noqa: TRY002
         try:
-            self.session.patch(
+            self.__send_with_conflict_retry(
+                "PATCH",
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 json={
                     "display_filename": display_filename,
@@ -856,8 +977,15 @@ class S3StorageManager:
             self.s3.Bucket(self.__get_bucket_name(ticket)).upload_fileobj(
                 Fileobj=file, Key=key
             )
-        except DuplicateFileException:
-            if not ignore_duplicate_check or not NEW_STORAGE_ENABLED:
+        except DuplicateFileException as ex:
+            # The key contains the md5 and the technical origin, so the file in
+            # S3 is our own derivative from an earlier, partially failed attempt.
+            # Continue so the derivative document and thumbnail_filename get
+            # completed instead of failing on every retry.
+            is_own_derivative = ex.filename == key
+            if not is_own_derivative and (
+                not ignore_duplicate_check or not NEW_STORAGE_ENABLED
+            ):
                 raise
 
         new_key = key.split("/")[-1]
@@ -878,7 +1006,8 @@ class S3StorageManager:
         )
         thumbnail_key = key
         try:
-            self.session.post(
+            self.__send_with_conflict_retry(
+                "POST",
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}/derivatives",
                 json=data,
             ).raise_for_status()
@@ -897,7 +1026,8 @@ class S3StorageManager:
         except Exception as ex:
             raise Exception(str(ex)) from ex  # noqa: TRY002
         try:
-            self.session.patch(
+            self.__send_with_conflict_retry(
+                "PATCH",
                 f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                 json={
                     "thumbnail_filename": thumbnail_key,
